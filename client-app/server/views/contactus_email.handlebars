@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html style="height: 100%; margin: 0; padding: 0; background-color: #f9f9f9;">
+<head>
+  <link href='https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap' rel='stylesheet'>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>User Complaint</title>
+  <style>
+    /* General Styles */
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+
+    .email-wrapper {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .email-header {
+      background-color: rgb(15, 15, 15);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .email-header img {
+      max-width: 100px;
+      height: auto;
+    }
+
+    .email-body {
+      padding: 25px;
+      color: white;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .email-body h2 {
+      font-size: 18px;
+      color: #00aeff;
+      margin-bottom: 15px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .email-body p {
+      color: white;
+      margin-bottom: 10px;
+    }
+
+    .email-body p b {
+      color: white;
+    }
+
+    .email-body .details {
+      margin: 15px 0;
+      padding: 15px;
+      background-color: #f4f4f4;
+      border: 1px solid #dddddd;
+      border-radius: 6px;
+      color: #333333;
+    }
+
+    .email-body .details p {
+      color: #333333;
+      margin: 6px 0;
+      font-size: 14px;
+    }
+
+    .email-body .details b {
+      color: #000000;
+    }
+
+    .email-body a {
+      display: inline-block;
+      background-color: #00aeff;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 15px;
+      text-align: center;
+      transition: background-color 0.3s ease;
+    }
+
+    .email-body .details a {
+      color: #333333 !important;
+      background-color: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      text-decoration: none;
+      font-weight: normal;
+    }
+
+    .email-footer {
+      background-color: #f1f1f1;
+      text-align: center;
+      padding: 12px;
+      font-size: 11px;
+      color: #777777;
+    }
+
+    /* Responsive Styles */
+    @media only screen and (max-width: 569px) {
+      .email-body {
+        padding: 20px;
+      }
+
+      .email-body h2 {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <!-- Header -->
+    <div class="email-header">
+      <img src="cid:logo" alt="Company Logo">
+    </div>
+
+    <!-- Body -->
+    <div class="email-body">
+      <h2>A message came from your website</h2>
+      <div class="details">
+        <p><b>Full Name:</b> {{fullname}}</p>
+        <p><b>Email:</b> {{email}}</p>
+        <p><b>Phone:</b> {{phone}}</p>
+        <p><b>Complaint:</b> {{message}} </p>
+      </div>
+      <a href="mailto:{{email}}">Reply to User</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="email-footer">
+      &copy; Tech By Cas. All Rights Reserved.
+    </div>
+  </div>
+</body>
+</html>

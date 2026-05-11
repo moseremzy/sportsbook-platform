@@ -1,0 +1,91 @@
+/* =========================
+   GLOBAL THEME (SPORTSBOOK)
+========================= */
+
+:root {
+    /* ===== BACKGROUNDS ===== */
+    --bg: linear-gradient(to right bottom, #003122, #0f1513);            /* hover / active states */
+  
+    /* ===== BRAND COLORS ===== */
+    --color1: #01d796;
+    --color2: #00533a;
+    --main_gradient: linear-gradient(to right bottom, #01d796, #01d796);
+  
+  
+    /* ===== TEXT ===== */
+    --text: #ffffff;
+    --muted: #9aa4b2;
+    --faded: #6b7280;
+  
+    /* ===== BORDERS ===== */
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.15);
+  
+    /* ===== TYPOGRAPHY ===== */
+    --font-family: 'Plus Jakarta Sans', sans-serif;
+  
+    /* ===== SPACING ===== */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+  
+    /* ===== RADIUS ===== */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+  
+    /* ===== SHADOWS ===== */
+    --shadow-sm: 0 2px 6px rgba(0,0,0,0.2);
+    --shadow-md: 0 6px 18px rgba(0,0,0,0.35);
+    --shadow-lg: 0 12px 30px rgba(0,0,0,0.5);
+  
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: 0.15s ease;
+    --transition: 0.25s ease;
+  }
+  
+  /* =========================
+     RESET
+  ========================= */
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: var(--font-family);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    font-size: var(--text-md);
+  }
+
+  input,
+  button,
+  select,
+  textarea {
+    font-family: var(--font-family);
+  }
+  
+  /* =========================
+     SCROLLBAR (OPTIONAL NICE TOUCH)
+  ========================= */
+  
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--surface-3);
+    border-radius: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
