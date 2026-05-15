@@ -3,6 +3,8 @@ import BaseLayout from '../layouts/Baselayout.vue'
 import PageNotFound from '../views/Page-Not-Found.vue'
 import Home from '../views/Home.vue'
 import Events from '../views/Events.vue'
+import ViewEvent from '../views/View-Event.vue'
+import SignIn from '../views/Sign-in.vue'
 import { useUserStore } from '@/stores/user'
 import { useInteractiveStore } from '@/stores/interactive'
 
@@ -27,11 +29,29 @@ routes: [
     },
 
     {
+      path: "/sign-in",
+      name: "sign-in",
+      component: SignIn,
+      meta: {
+        title: "Sign in or Sign up - Tech By Cas"
+      }
+    },
+
+    {
       path: '/events',
       name: 'events',
       component: Events,
       meta: {
         title: 'Events - Tech By Cas'
+      }
+    },
+
+    {
+      path: '/view-event/:id',
+      name: 'View-Event',
+      component: ViewEvent,
+      meta: {
+        title: 'View Event - Tech By Cas'
       }
     },
 

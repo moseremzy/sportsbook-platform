@@ -5,12 +5,18 @@
 :root {
     /* ===== BACKGROUNDS ===== */
     --bg: linear-gradient(to right bottom, #003122, #0f1513);            /* hover / active states */
-  
+    --primary-gradient-background-color1: #00533a;
+    --primary-gradient-background-color2: #00533a;
+    --secondary-gradient-background-color1: #01d796;
+    --secondary-gradient-background-color2: #013424;
+
     /* ===== BRAND COLORS ===== */
     --color1: #01d796;
     --color2: #00533a;
     --main_gradient: linear-gradient(to right bottom, #01d796, #01d796);
   
+    --primary-gradient-background: linear-gradient(110deg, var(--primary-gradient-background-color1), var(--primary-gradient-background-color2) 100%);
+    --secondary-gradient-background: linear-gradient(103deg, var(--secondary-gradient-background-color1) -30%, var(--secondary-gradient-background-color2));
   
     /* ===== TEXT ===== */
     --text: #ffffff;

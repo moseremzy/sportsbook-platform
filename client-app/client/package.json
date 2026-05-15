@@ -17,6 +17,7 @@
     "axios": "^1.7.7",
     "core-js": "^3.8.3",
     "dayjs": "^1.11.13",
+    "libphonenumber-js": "^1.13.1",
     "mapbox-gl": "^2.0.0",
     "pinia": "^2.2.6",
     "smoothscroll-polyfill": "^0.4.4",
@@ -24,7 +25,8 @@
     "vue-easy-lightbox": "^1.19.0",
     "vue-eslint-parser": "^9.4.3",
     "vue-router": "^4.0.3",
-    "vue-slick-carousel": "^1.0.6"
+    "vue-slick-carousel": "^1.0.6",
+    "vue-tel-input": "^9.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
