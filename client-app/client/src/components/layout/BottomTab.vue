@@ -1,6 +1,6 @@
 <template>
   <div class="bottom-tab">
-    <router-link to = "#" class="tab-item" :class="{ active: activeTab === 'bets' }" @click="activeTab = 'bets'">
+    <router-link to="/events?match_mode=pending" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <rect x="3" y="3" width="7" height="9" rx="1.5"/>
         <rect x="14" y="3" width="7" height="5" rx="1.5"/>
@@ -10,7 +10,7 @@
       <span>Bets</span>
     </router-link>
 
-    <router-link to = "#" class="tab-item" :class="{ active: activeTab === 'casino' }" @click="activeTab = 'casino'">
+    <router-link to = "/coming-soon" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="12" cy="12" r="9"/>
         <circle cx="12" cy="12" r="3"/>
@@ -19,15 +19,15 @@
       <span>Casinos</span>
     </router-link>
 
-    <button class="tab-item" :class="{ active: activeTab === 'deposit' }" @click="activeTab = 'deposit'">
+    <router-link to = "/account/deposits" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <rect x="2" y="5" width="20" height="14" rx="2"/>
         <path d="M2 10h20"/>
       </svg>
       <span>Deposit</span>
-    </button>
+    </router-link>
 
-    <router-link to = "#" class="tab-item" :class="{ active: activeTab === 'support' }" @click="activeTab = 'support'">
+    <router-link to = "/support" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         <circle cx="12" cy="10" r="1" fill="currentColor"/>
@@ -37,7 +37,7 @@
       <span>Support</span>
     </router-link>
 
-    <router-link to = "#" class="tab-item" :class="{ active: activeTab === 'menu' }" @click="activeTab = 'menu'">
+    <router-link to = "/account/bet-history" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <line x1="3" y1="6" x2="21" y2="6"/>
         <line x1="3" y1="12" x2="21" y2="12"/>
@@ -50,7 +50,6 @@
 
 <script setup>
 import { ref } from 'vue'
-const activeTab = ref('bets')
 </script>
 
 <style scoped>
@@ -104,7 +103,7 @@ const activeTab = ref('bets')
   white-space: nowrap;
 }
 
-.tab-item.active {
+.tab-item--active {
   color: var(--color1);
 }
 

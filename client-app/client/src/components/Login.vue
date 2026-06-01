@@ -67,23 +67,6 @@ onUpdated(() => {
 /* Hooks */  
 
 
-//resend this user verification email
-async function send_confirmation_mail(email) {
-
-    try {
-
-    const response = await API.ResendConfirmationMail({ confirmationEmail: email});
-
-    router.push({ name: "email-activation", query: { confirmationEmail: email} })
-      
-    } catch (error) {
-     
-     console.log(error)
-     
-    }
-}
-
-
 function emailvalidated() {
 
     let pattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
@@ -135,59 +118,27 @@ async function validation() {
       
     const response = await API.login(formvalues);
   
-    user_store.logged_In(response.user, response.isAuthenticated, response.showTermsConditions)
+    user_store.logged_In(response.user, response.isAuthenticated)
 
     interactive_store.backend_message = `Welcome ${response.user.fullname}`
 
     interactive_store.display_success_alert_box()
 
-    // interactive_store.display_terms_conditons_box(response.showTermsConditions)
+    if (interactive_store.page_to_go) {
 
-    switch (interactive_store.page_to_go) {
-
-       case 'profile':
-
-            interactive_store.toggle_loading_overlay(false)
-
-            window.location.replace(`/account/${interactive_store.page_to_go}`)
-            
-            break;
-
-        case 'checkout':
-
-            interactive_store.toggle_loading_overlay(false)
-
-            window.location.replace(`/account/${interactive_store.page_to_go}`)
-            
-            break;
-
-        case 'payment-verification':
-
-            interactive_store.toggle_loading_overlay(false)
-
-            window.location.replace(`/account/${interactive_store.page_to_go}`)
-            
-            break;
+      return window.location.replace(`/account/${interactive_store.page_to_go}`)
     
-        default:
+    }
 
-            interactive_store.toggle_loading_overlay(false)
+    router.push({name: 'home'})
 
-            router.push({ name: "home"}) 
-             
-        break;
-    
-      }
+    } catch (error) {
 
-      } catch (error) {
-
-      if (error.response?.data?.message === 'Account not verified. Please verify your email') {
-
-      await send_confirmation_mail(formvalues.email)
-
-      }  
+    console.log(error)
+     
     }
   }
+  interactive_store.toggle_loading_overlay(false)
 }
 </script>
 

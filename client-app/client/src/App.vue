@@ -6,27 +6,19 @@
 
 import { onMounted } from 'vue'
 
-import { useSettingStore } from '@/stores/settings'
-
-import { useOrdersStore } from '@/stores/orders'
-
-import { useUserStore } from '@/stores/user'
-
-import { useProductStore } from './stores/products';
-
-import { useCategoriesStore } from './stores/categories';
+import { useUserStore } from './stores/user';
+import { useSettingsStore } from './stores/settings';
+import { useCountriesStore } from './stores/countries';
+import { usesportsStore } from './stores/sports';
+import { useLeaguesStore } from './stores/leagues';
 
 import API from "./api/index";
 
-const settingStore = useSettingStore()
-
-const orders_store = useOrdersStore()
-
-const user_store = useUserStore()
-
-const productStore = useProductStore();
-
-const categoriesStore = useCategoriesStore();
+const userStore = useUserStore();
+const settings_store = useSettingsStore();
+const countriesStore = useCountriesStore()
+const sportsStore = usesportsStore();
+const leaguesStore = useLeaguesStore();
 
 onMounted(() => {
 
@@ -34,33 +26,23 @@ setInterval(async () => {   // In App.vue (your polling function)
 
   try {
 
-    await user_store.fetch_user().catch(err => {
+    await userStore.fetch_user().catch(err => { // Try to fetch user but DON'T block the app if it fails
 
-      console.log("Polling: User fetch failed", err);
+      console.log("User fetch failed (not logged in).", err); 
     
     });
-    
-    
-    if (user_store.user) { // Only fetch orders if user is authenticated
-      
-      await orders_store.fetch_orders().catch(err => {
-        
-        console.log("Polling: Orders fetch failed", err);
-      
-      });
-    
-    }
-    
-    
-    await Promise.all([ // Refresh public data
+  
+    await Promise.all([ // fetch public data
 
-      productStore.fetch_products(),
-      
-      categoriesStore.fetch_categories(),
-      
-      settingStore.fetch_settings()
-    
-    ]);
+      countriesStore.fetch_countries(),
+
+      sportsStore.fetch_sports(),
+
+      leaguesStore.fetch_leagues(),
+
+      settings_store.fetch_settings()
+
+    ])
   
   } catch (error) {
     

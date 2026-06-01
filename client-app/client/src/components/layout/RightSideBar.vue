@@ -9,7 +9,7 @@
   </Transition>
 
   <!-- Sidebar -->
-  <Transition name="slide-right">
+  <Transition name="slide-right" v-if="user_store.isAuthenticated">
     <aside v-show="interactive_store.activeNav === 'right_side_bar'" class="right-sidebar">
       <!-- Avatar -->
       <div class="profile-header">
@@ -19,21 +19,20 @@
       <!-- Balance card -->
       <div class="balance-card">
         <span class="balance-label">Balance</span>
-        <span class="balance-amount">{{ balance }} ₦</span>
+        <span class="balance-amount">{{user_store.formattedPrice(user_store.user.balance)}}</span>
       </div>
 
       <!-- Deposit button -->
-      <button class="deposit-btn">Deposit</button>
+      <router-link to = "/account/deposits" @click="interactive_store.toggleNav()" class="deposit-btn">Deposit</router-link>
 
       <!-- Menu items -->
       <nav class="sidebar-nav">
-        <router-link to ="#" class="nav-item" @click="interactive_store.toggleNav()">Withdrawal Request</router-link>
-        <router-link to ="#" class="nav-item nav-item--active" @click="interactive_store.toggleNav()">Transaction History</router-link>
-        <router-link to ="#" class="nav-item" @click="interactive_store.toggleNav()">Voucher</router-link>
-        <router-link to ="#" class="nav-item" @click="interactive_store.toggleNav()">My bets</router-link>
-        <router-link to ="#" class="nav-item" @click="interactive_store.toggleNav()">Settings</router-link>
-        <router-link to ="#" class="nav-item" @click="interactive_store.toggleNav()">Support</router-link>
-        <router-link to ="#" class="nav-item nav-item--exit" @click="interactive_store.toggleNav()">Exit</router-link>
+        <router-link to ="/account/withdrawals" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">Withdrawal Request</router-link>
+        <router-link to ="/account/transactions" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">Transaction History</router-link>
+        <router-link to ="/account/bet-history" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">My bets</router-link>
+        <router-link to ="/account/settings" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">Settings</router-link>
+        <router-link to ="/support" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">Support</router-link>
+        <router-link to ="#" class="nav-item nav-item--exit" @click="logout">Exit</router-link>
       </nav>
     </aside>
   </Transition>
@@ -41,18 +40,39 @@
 
 <script setup>
 import { computed } from 'vue'
+import API from '../../api/index'
 import { useInteractiveStore } from '@/stores/interactive';
- 
+import { useUserStore } from '@/stores/user';
+
 const interactive_store = useInteractiveStore()
+const user_store = useUserStore()
 
-// Replace with your actual auth store values
-const userName = 'M'
-const balance = '0'
-const userInitial = computed(() => userName.charAt(0).toUpperCase())
+const userInitial = computed(() => user_store.user?.fullname.charAt(0).toUpperCase())
 
-function handleExit() {
-  uiStore.closeRightSidebar()
-  // Add your logout logic here
+ async function logout() {
+
+  try {
+
+   interactive_store.toggle_loading_overlay(true)
+
+   const response = await API.logout()
+
+   user_store.logged_Out()
+
+   interactive_store.backend_message = "Logged out successfully"
+
+   interactive_store.display_success_alert_box();
+
+   window.location.assign("/")
+
+  } catch (error) {
+
+    console.log(error)
+    
+  }
+
+  interactive_store.toggle_loading_overlay(false)
+
 }
 </script>
 
@@ -137,6 +157,7 @@ function handleExit() {
   color: #fff;
   font-weight: 700;
   font-size: 15px;
+  text-decoration: none;
   border: none;
   border-radius: 10px;
   padding: 12px;

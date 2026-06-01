@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <div class="auth-box">
-      <h2>Welcome to <span class="brand">TechbyCas.com</span></h2>
+      <h2>Welcome to <span class="brand">{{settings_store.settings.website}}</span></h2>
       <p class="subtitle">
         Log in or create an account to begin your betting experience
       </p>
@@ -30,8 +30,10 @@ import Register from "@/components/Register.vue"; // Make sure you have this fil
 import { onMounted, onUnmounted, onUpdated, reactive, toRaw, ref, watch} from 'vue'
 import MIDDLEWARES from "../middlewares/middlewares"
 import { useInteractiveStore } from '@/stores/interactive'
+import { useSettingsStore } from '@/stores/settings'
 
 const interactive_store = useInteractiveStore()
+const settings_store = useSettingsStore()
 
 let currentTab = ref("Login");
 

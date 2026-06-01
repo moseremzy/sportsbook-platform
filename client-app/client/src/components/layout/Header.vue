@@ -6,15 +6,15 @@
       </button>
       <a href="/" class="logo">
         <img src="../../assets/static_images/logo.png" alt="Viking Bet" class="logo-img" />
-        <span class="logo-text">PRIMEODDS</span>
+        <span class="logo-text">{{settings_store.settings.website.toUpperCase()}}</span>
       </a>
     </div>
 
     <div class="header-right">
-      <template v-if="isLoggedIn">
+      <template v-if="user_store.isAuthenticated">
         <div class="balance">
           <span class="balance-label">Balance</span>
-          <span class="balance-value">{{ balance }} ₦</span>
+          <span class="balance-value">{{ user_store.formattedPrice(user_store.user.balance) }}</span>
         </div>
         <button class="icon-btn profile-btn" @click.stop="interactive_store.toggleNav('right_side_bar')" aria-label="Profile">
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -22,25 +22,28 @@
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
           </svg>
         </button>
-        <button class="deposit-btn">Deposit</button>
+        <router-link to = "/account/deposits" class="deposit-btn">Deposit</router-link>
       </template>
 
       <template v-else>
-        <button class="auth-btn signin-btn">Sign In</button>
-        <button class="auth-btn signup-btn">Sign Up</button>
+        <router-link to = "/sign-in" class="auth-btn signin-btn">Sign In</router-link>
+        <router-link to = "/sign-in" class="auth-btn signup-btn">Sign Up</router-link>
       </template>
     </div>
   </header>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useInteractiveStore } from '@/stores/interactive';
- 
+import { useUserStore } from '@/stores/user'
+import { useSettingsStore } from '../../stores/settings'
+
+const settings_store = useSettingsStore()
+const user_store = useUserStore()
 const interactive_store = useInteractiveStore()
 
-const isLoggedIn = ref(true)
-const balance = ref('0')
+
 </script>
 
 <style scoped>
@@ -185,6 +188,7 @@ const balance = ref('0')
 .deposit-btn {
   background: var(--color1);
   color: var(--text);
+  text-decoration: none;
   font-weight: 700;
   font-size: 14px;
   border: none;
@@ -201,6 +205,7 @@ const balance = ref('0')
 }
 
 .auth-btn {
+  text-decoration: none;
   font-size: 13.5px;
   font-weight: 600;
   border-radius: 8px;

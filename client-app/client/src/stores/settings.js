@@ -1,35 +1,23 @@
 import { defineStore } from "pinia";
 
-import API from "../api/index";
+import API from "../api/index.js";
 
-export const useSettingStore = defineStore("settings", {
-    
+export const useSettingsStore = defineStore("settings", {
+
     state: () => ({
 
-      store_state: "",
-      
-      store_city: "",
-      
-      fee_same_state: 0,
-      
-      fee_same_city: 0,
-      
-      fee_other_state: 0,
-
-      whatsapp: null
+       settings: []
 
     }),
-    
+
     actions: {
 
       async fetch_settings() {
-        
-        const response = await API.fetch_settings();
 
-        Object.assign(this, response.all_settings);
-      
+        const response = await API.fetch_settings(); // Axios interceptor handles errors
+
+        this.settings = response.all_settings || []
+
       }
-    
-    }
-  
+   }
 })

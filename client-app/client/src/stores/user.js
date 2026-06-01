@@ -6,24 +6,34 @@ export const useUserStore = defineStore("user", {
   state: () => ({
     
     isAuthenticated: false,
-
-    showTermsConditions: false,
     
     user: null,
     
     isFetched: false, // 🔑 tracks whether fetch_user completed
   
   }),
+
+  getters: {
+    
+    formattedPrice: (state) => {
+
+      return (amount) => {
+        
+       return new Intl.NumberFormat(state.user?.locale || 'en-US', { style: 'currency', currency: state.user?.currency || 'USD' }).format(amount) 
+    
+    }
+
+  }
+
+  },
   
   actions: {
     
-    logged_In(user, isAuthenticated, showTermsConditions) {
+    logged_In(user, isAuthenticated) {
       
       this.user = user;
       
       this.isAuthenticated = isAuthenticated;
-
-      this.showTermsConditions =showTermsConditions
     
     },
 
@@ -40,10 +50,8 @@ export const useUserStore = defineStore("user", {
       try {
 
         const response = await API.fetch_user(); // Axios interceptor handles errors
-
-        console.log(response)
         
-        this.logged_In(response.user, response.isAuthenticated, response.showTermsConditions);
+        this.logged_In(response.user, response.isAuthenticated);
       
       } catch (err) {
         

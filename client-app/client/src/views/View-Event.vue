@@ -5,10 +5,10 @@
          MOBILE: Top bar
     ════════════════════════════════════════════ -->
     <div class="mobile-topbar mobile-only">
-      <button class="mob-all-sports-btn" @click="interactive_store.toggleNav('event_side_bar')">
-        <span class="hamburger-icon">&#9776;</span> All Sports
+      <button class="mob-back-btn" @click="router.back()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M19 12H5M5 12l7 7M5 12l7-7"/></svg>
+        Back
       </button>
-      <button class="mob-open-live-btn">Open Live</button>
       <button class="mob-search-btn" @click="mobileSearchOpen = !mobileSearchOpen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
       </button>
@@ -16,7 +16,7 @@
 
     <!-- Mobile Search Bar -->
     <div class="mobile-search-bar mobile-only" v-if="mobileSearchOpen">
-      <input v-model="searchQuery" placeholder="Search events..." class="mob-search-input" />
+      <input v-model="marketSearch" placeholder="Search markets..." class="mob-search-input" />
     </div>
 
     <!-- ═══════════════════════════════════════════
@@ -25,389 +25,442 @@
     <div class="main-layout">
 
       <!-- ── LEFT SIDEBAR ── -->
-      <EventSidebar
-        :sports="sports"
-        :activeSport="activeSport"
-        :activeCountry="activeCountry"
-        :activeLeague="activeLeague"
-        :matchMode="matchMode"
-        :sliderHours="sliderHours"
-        :searchQuery="searchQuery"
-        @select-sport="selectSport"
-        @toggle-country="toggleCountry"
-        @select-league="selectLeague"
-        @update:matchMode="matchMode = $event"
-        @update:sliderHours="sliderHours = $event"
-        @update:searchQuery="searchQuery = $event"
-      />
+      <EventSidebar :sports="groupedSports" base-path="/events" />
 
       <div class="view-event">
 
-        <!-- ── MATCH CARD ── -->
-        <div class="match-card">
-
-          <!-- TOP BAR: league centered, actions right -->
-          <div class="card-top">
-            <div class="league">
-              <img src="../assets/static_images/LEAGUES/UCL.png" alt="">
-              <span>Football. UEFA Champions League</span>
-            </div>
-            <div class="top-actions">
-              <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-              <i class="fa-regular fa-star"></i>
-            </div>
-          </div>
-
-          <!-- MOBILE ONLY: standalone time -->
-          <div class="match-time mobile-only">
-            <h1>17:00</h1>
-          </div>
-
-          <!-- TEAMS ROW (score sits between teams on desktop) -->
-          <div class="teams">
-            <div class="team team-home">
-              <img src="https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg" alt="">
-              <span>Paris Saint-Germain</span>
-            </div>
-
-            <!-- CENTER: score (live) or time+date (prematch) -->
-            <div class="center-block">
-              <!-- LIVE: show score -->
-              <div class="live-score-card">
-                <div class="score">
-                  <span class="home-score">0</span>
-                  <span class="separator">:</span>
-                  <span class="away-score">1</span>
-                </div>
-                <div class="match-status">
-                  <span>2 Half</span>
-                  <span class="dot"></span>
-                </div>
-              </div>
-
-              <!-- PREMATCH: show time + date (swap with above when needed) -->
-              <!--
-              <div class="prematch-time">
-                <h2>17:00</h2>
-                <span class="match-date">30.05</span>
-              </div>
-              -->
-            </div>
-
-            <div class="team team-away">
-              <img src="https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg" alt="">
-              <span>Arsenal</span>
-            </div>
-          </div>
-
-          <!-- COUNTDOWN -->
-          <div class="countdown">
-            <div class="time-box">
-              <h2>16</h2>
-              <small>days</small>
-            </div>
-            <span>:</span>
-            <div class="time-box">
-              <h2>02</h2>
-              <small>hours</small>
-            </div>
-            <span>:</span>
-            <div class="time-box">
-              <h2>05</h2>
-              <small>minutes</small>
-            </div>
-            <span>:</span>
-            <div class="time-box">
-              <h2>08</h2>
-              <small>seconds</small>
-            </div>
-          </div>
+        <!-- Loading -->
+        <div v-if="loading" class="state-screen">
+          <div class="spinner"></div>
+          <span>Loading event...</span>
         </div>
 
-        <!-- ═══════════════════════════════════════════
-             MARKET TAB BAR
-        ════════════════════════════════════════════ -->
-        <div class="market-tabbar">
-          <button class="tab-arrow" @click="scrollSportsLeft">
-            <font-awesome-icon icon="fa-solid fa-chevron-left"/>
-          </button>
-          <div class="market-tabs-inner" ref="sportsScroll">
-            <button
-              v-for="sport in sports"
-              :key="sport.id"
-              class="market-item"
-              :class="{ active: activeSport === sport.id }"
-              @click="selectSport(sport.id)"
-            >
-              <span class="market-item-name">{{ sport.name }}</span>
+        <!-- Error -->
+        <div v-else-if="!event" class="state-screen">
+          <span style="font-size:32px">📭</span>
+          <span>Event not found.</span>
+        </div>
+
+        <template v-else>
+
+          <!-- ── MATCH CARD ── -->
+          <div class="match-card" :class="{ 'is-live': event.status === 'live' }">
+
+            <!-- TOP BAR -->
+            <div class="card-top">
+              <div class="league">
+                <img v-if="event.league_logo" :src="event.league_logo" alt="" />
+                <span>{{ event.sport_name }}. {{ event.league_name }}</span>
+              </div>
+              <div class="top-actions">
+                <i class="fa-regular fa-star"></i>
+              </div>
+            </div>
+
+            <!-- MOBILE ONLY: standalone time -->
+            <div class="match-time mobile-only" v-if="event.status !== 'live'">
+              <h1>{{ formatTime(event.start_time) }}</h1>
+            </div>
+
+            <!-- TEAMS ROW -->
+            <div class="teams">
+
+              <div class="team team-home">
+                <img v-if="event.home_logo" :src="event.home_logo" :alt="event.home_team" />
+                <span class="team-initial" v-else>{{ event.home_team?.[0] }}</span>
+                <span>{{ event.home_team }}</span>
+              </div>
+
+              <!-- CENTER BLOCK -->
+              <div class="center-block">
+
+                <!-- LIVE -->
+                <div v-if="event.status === 'live'" class="live-score-card">
+                  <div class="score">
+                    <span class="home-score">{{ event.home_score }}</span>
+                    <span class="separator">:</span>
+                    <span class="away-score">{{ event.away_score }}</span>
+                  </div>
+                  <div class="match-status">
+                    <span>{{ currentPeriodLabel }}</span>
+                    <span class="dot"></span>
+                  </div>
+                  <!-- Period scores -->
+                  <div v-if="event.periods && Object.keys(event.periods).length" class="period-scores-row">
+                    <div
+                      v-for="(scores, period) in event.periods"
+                      :key="period"
+                      class="period-col"
+                      :class="{ 'is-fulltime': period === 'fulltime' }"
+                    >
+                      <span class="period-label">{{ formatMatchPeriod(period, event.sport_slug) }}</span>
+                      <span class="period-vals">{{ scores.home }} - {{ scores.away }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PREMATCH -->
+                <div v-else class="prematch-time">
+                  <h2 class="desktop-only">{{ formatTime(event.start_time) }}</h2>
+                  <span class="match-date">{{ formatDate(event.start_time) }}</span>
+                  <!-- Countdown -->
+                  <div class="countdown" v-if="countdown">
+                    <div class="time-box"><h2>{{ countdown.days }}</h2><small>days</small></div>
+                    <span>:</span>
+                    <div class="time-box"><h2>{{ countdown.hours }}</h2><small>hours</small></div>
+                    <span>:</span>
+                    <div class="time-box"><h2>{{ countdown.minutes }}</h2><small>min</small></div>
+                    <span>:</span>
+                    <div class="time-box"><h2>{{ countdown.seconds }}</h2><small>sec</small></div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="team team-away">
+                <img v-if="event.away_logo" :src="event.away_logo" :alt="event.away_team" />
+                <span class="team-initial" v-else>{{ event.away_team?.[0] }}</span>
+                <span>{{ event.away_team }}</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ═══════════════════════════════════════════
+               MARKET TAB BAR
+          ════════════════════════════════════════════ -->
+          <div class="market-tabbar">
+            <button class="tab-arrow" @click="scrollMarketsLeft">
+              <font-awesome-icon icon="fa-solid fa-chevron-left"/>
+            </button>
+            <div class="market-tabs-inner" ref="marketsScroll">
+
+               
+              <button
+                v-for="market in filteredMarkets"
+                :key="market.id"
+                class="market-item"
+                :class="{ active: activeMarketId === market.id }"
+                @click="activeMarketId = market.id"
+              >
+                {{ market.market_slug }}
+              </button>
+            </div>
+            <button class="tab-arrow" @click="scrollMarketsRight">
+              <font-awesome-icon icon="fa-solid fa-chevron-right"/>
             </button>
           </div>
-          <button class="tab-arrow" @click="scrollSportsRight">
-            <font-awesome-icon icon="fa-solid fa-chevron-right"/>
-          </button>
-        </div>
 
-        <!-- Market Card -->
-        <MarketCard />
+          <!-- Desktop market search -->
+          <div class="market-search-wrap desktop-only">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input v-model="marketSearch" placeholder="Search markets..." class="market-search-input" />
+          </div>
 
+          <!-- ── MARKET SELECTIONS ── -->
+          <div class="markets-panel">
+
+            <div v-if="!activeMarket" class="state-screen">
+              <span>Select a market above</span>
+            </div>
+
+            <div v-else class="market-card">
+              <div class="market-card-header">
+                <span class="market-card-name">{{ activeMarket.market_slug }}</span>
+              </div>
+              <div class="selections-grid" :class="gridClass(activeMarket.selections)">
+                <button
+                  v-for="sel in activeMarket.selections"
+                  :key="sel.id"
+                  class="odd-btn"
+                  :class="{ selected: events_store.isBetSelected(sel.id), suspended: sel.status === 'suspended' }"
+                  :disabled="sel.status === 'suspended'"
+                  @click="events_store.toggleBet(eventForBet, sel, { leagueId: event.league_slug, leagueName: event.league_name, market_slug: activeMarket.market_slug, sportSlug: event.sport_slug })"
+                >
+                  <span class="odd-label">
+                    {{ HELPER.formatSelectionName(sel.name, event.sport_slug) }}
+                    <template v-if="sel.line_value !== null && sel.line_value !== undefined">
+                      {{ sel.line_value }}
+                    </template>
+                  </span>
+                  <span class="odd-value">{{ sel.status === 'suspended' ? '–' : parseFloat(sel.odd).toFixed(2) }}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </template>
       </div>
 
       <!-- ── RIGHT: BETSLIP ── -->
-      <Betslip
-        :betslip="betslip"
-        :betMode="betMode"
-        :betAmount="betAmount"
-        :totalCoeff="totalCoeff"
-        @remove-bet="removeBet"
-        @place-bet="placeBet"
-        @update:betAmount="betAmount = $event"
-      />
+      <Betslip/>
 
     </div>
   </div>
 </template>
 
 <script setup>
-import { useInteractiveStore } from '../stores/interactive';
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import API from '../api/index'
+import HELPER from '../middlewares/middlewares'
+import { useInteractiveStore } from '../stores/interactive'
+import { useCountriesStore } from '../stores/countries'
+import { usesportsStore } from '../stores/sports'
+import { useLeaguesStore } from '../stores/leagues'
+import { useEventsStore } from '../stores/events'
 import EventSidebar from '../components/EventSidebar.vue'
 import Betslip from '../components/Betslip.vue'
-import MarketCard from '../components/MarketCard.vue'
+
+const route  = useRoute()
+const router = useRouter()
 
 const interactive_store = useInteractiveStore()
+const countries_store   = useCountriesStore()
+const sports_store      = usesportsStore()
+const leagues_store     = useLeaguesStore()
+const events_store      = useEventsStore()
 
-const sportsScroll = ref(null)
-const eventsScroll = ref(null)
+// ── State ─────────────────────────────────────────────
+const event          = ref(null)
+const loading        = ref(false)
+const activeMarketId = ref(null)
+const marketSearch   = ref('')
+const mobileSearchOpen = ref(false)
+const marketsScroll  = ref(null)
+let pollInterval = null
 
-const sports = [
-  {
-    id: 'football', name: 'Football', count: 36,
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 6.32 2.26M12 2a10 10 0 0 0-6.32 2.26M2.26 8.68A10 10 0 0 1 12 2M21.74 8.68A10 10 0 0 0 12 2M12 22a10 10 0 0 1-9.74-13.32M12 22a10 10 0 0 0 9.74-13.32M8 12l2 5 4-2 2-5-4-2z"/></svg>`,
-    countries: [
-      { id: 'england', name: 'England',  leagues: [{ id: 'epl', name: 'Premier League' }] },
-      { id: 'spain',   name: 'Spain',    leagues: [{ id: 'laliga', name: 'La Liga' }] },
-      { id: 'germany', name: 'Germany',  leagues: [{ id: 'bundesliga', name: 'Bundesliga' }] },
-    ]
-  },
-  {
-    id: 'basketball', name: 'Basketball', count: 14,
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20M4.93 4.93a10 10 0 0 1 14.14 0M4.93 19.07a10 10 0 0 0 14.14 0"/></svg>`,
-    countries: [
-      { id: 'usa-bball', name: 'USA', leagues: [{ id: 'nba', name: 'NBA' }, { id: 'ncaa', name: 'NCAA' }] },
-    ]
-  },
-  {
-    id: 'baseball', name: 'Baseball', count: 9,
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M5 5c2 2 2 10 0 14M19 5c-2 2-2 10 0 14M12 2c1 3 1 14 0 20"/></svg>`,
-    countries: [
-      { id: 'usa-base', name: 'USA', leagues: [{ id: 'mlb', name: 'MLB' }, { id: 'milb', name: 'Minor League' }] },
-    ]
+// ── Fetch event ───────────────────────────────────────
+async function fetchEvent() {
+
+  loading.value = true
+  
+  try {
+
+    const res = await API.fetch_event(route.params.id)
+    
+    event.value = res.data ?? null
+
+    if (event.value?.markets?.length) {
+      
+      activeMarketId.value = event.value.markets[0].id
+    
+    }
+  
+  } finally {
+    
+    loading.value = false
+  
   }
-]
 
-const allEvents = [
-  {
-    leagueId: 'epl', leagueName: 'England. Premier League', sportId: 'football', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    events: [
-      { id: 'e1', time: '15:00', date: '11.05', home: 'Manchester City', away: 'Arsenal',       odds: [2.10, 3.40, 3.20], more: 210 },
-      { id: 'e2', time: '17:30', date: '11.05', home: 'Chelsea',         away: 'Liverpool',      odds: [2.85, 3.20, 2.55], more: 198 },
-      { id: 'e3', time: '20:00', date: '11.05', home: 'Tottenham',       away: 'Manchester Utd', odds: [2.40, 3.10, 2.90], more: 175 },
-    ]
-  },
-  {
-    leagueId: 'laliga', leagueName: 'Spain. La Liga', sportId: 'football', flag: '🇪🇸',
-    events: [
-      { id: 'e4', time: '19:00', date: '11.05', home: 'Real Madrid', away: 'Barcelona', odds: [2.20, 3.50, 3.10], more: 320 },
-      { id: 'e5', time: '21:30', date: '11.05', home: 'Atletico',    away: 'Sevilla',   odds: [1.95, 3.40, 3.80], more: 145 },
-    ]
-  },
-  {
-    leagueId: 'bundesliga', leagueName: 'Germany. Bundesliga', sportId: 'football', flag: '🇩🇪',
-    events: [
-      { id: 'e6', time: '18:30', date: '11.05', home: 'Bayern Munich', away: 'Dortmund',   odds: [1.75, 3.80, 4.50], more: 280 },
-      { id: 'e7', time: '20:30', date: '11.05', home: 'Leipzig',       away: 'Leverkusen', odds: [2.60, 3.20, 2.70], more: 130 },
-    ]
-  },
-  {
-    leagueId: 'nba', leagueName: 'USA. NBA', sportId: 'basketball', flag: '🇺🇸',
-    events: [
-      { id: 'e8', time: '01:00', date: '12.05', home: 'LA Lakers', away: 'Golden State', odds: [1.90, null, 1.95], more: 88 },
-      { id: 'e9', time: '03:30', date: '12.05', home: 'Boston',    away: 'Miami Heat',   odds: [1.65, null, 2.25], more: 76 },
-    ]
-  },
-  {
-    leagueId: 'ncaa', leagueName: 'USA. NCAA', sportId: 'basketball', flag: '🇺🇸',
-    events: [
-      { id: 'e10', time: '23:00', date: '11.05', home: 'Duke', away: 'Kentucky', odds: [1.80, null, 2.05], more: 42 },
-    ]
-  },
-  {
-    leagueId: 'mlb', leagueName: 'USA. MLB', sportId: 'baseball', flag: '🇺🇸',
-    events: [
-      { id: 'e11', time: '22:10', date: '11.05', home: 'NY Yankees', away: 'Boston Red Sox', odds: [1.85, null, 1.98], more: 65 },
-      { id: 'e12', time: '00:40', date: '12.05', home: 'LA Dodgers', away: 'SF Giants',      odds: [1.70, null, 2.15], more: 58 },
-    ]
-  },
-  {
-    leagueId: 'milb', leagueName: 'USA. Minor League', sportId: 'baseball', flag: '🇺🇸',
-    events: [
-      { id: 'e13', time: '20:05', date: '11.05', home: 'Durham Bulls', away: 'Norfolk Tides', odds: [1.95, null, 1.88], more: 22 },
-    ]
-  },
-]
-
-const popularEvent = {
-  league: 'Football. Brazil. Campeonato Brasileiro ...',
-  home: 'Clube do Remo', away: 'Sociedade Esportiva Palmeiras',
-  score: '1 : 1', odds: [18, 1.66, 2.46], more: 194,
 }
 
+// Replace your existing watch with this
+watch(() => route.params.id, async () => {
+
+  loading.value = true
+  
+  try {
+    
+    const res = await API.fetch_event(route.params.id)
+    
+    event.value = res.data ?? null
+    
+    if (event.value?.markets?.length) {
+      activeMarketId.value = event.value.markets[0].id
+    }
+  
+  } finally {
+    
+    loading.value = false
+  
+  }
+  
+  startPolling() // restart poll for new event
+
+}, { immediate: true })
+
+
+// ── Filtered markets (search) ─────────────────────────
+const filteredMarkets = computed(() => {
+  if (!event.value?.markets) return []
+  const q = marketSearch.value.trim().toLowerCase()
+  if (!q) return event.value.markets
+  return event.value.markets.filter(m => m.name.toLowerCase().includes(q))
+})
+
+// ── Active market ─────────────────────────────────────
+const activeMarket = computed(() =>
+  filteredMarkets.value.find(m => m.id === activeMarketId.value) ?? null
+)
+
+// Auto-select first when search filters change
+watch(filteredMarkets, (list) => {
+  if (list.length && !list.find(m => m.id === activeMarketId.value)) {
+    activeMarketId.value = list[0].id
+  }
+})
+
+// ── Event shaped for toggleBet ────────────────────────
+const eventForBet = computed(() => ({
+  id:         event.value?.id,
+  home:       event.value?.home_team,
+  away:       event.value?.away_team,
+  home_logo:  event.value?.home_logo,
+  away_logo:  event.value?.away_logo,
+  status:     event.value?.status,
+  home_score: event.value?.home_score,
+  away_score: event.value?.away_score,
+}))
+
+// ── Period / label helpers ────────────────────────────
+function formatMatchPeriod(period, sport) {
+  const maps = {
+    football:   { p1: '1H', p2: '2H', fulltime: 'FT', overtime: 'ET' },
+    basketball: { p1: 'Q1', p2: 'Q2', p3: 'Q3', p4: 'Q4', fulltime: 'FT', overtime: 'OT' },
+    baseball:   { p1: '1I', p2: '2I', p3: '3I', p4: '4I', p5: '5I', p6: '6I', p7: '7I', p8: '8I', p9: '9I', fulltime: 'FT', overtime: 'EI' },
+  }
+  return maps[sport]?.[period] ?? period
+}
+
+const currentPeriodLabel = computed(() => {
+  if (!event.value?.periods) return 'LIVE'
+  const keys = Object.keys(event.value.periods).filter(p => p !== 'fulltime')
+  const last = keys.at(-1)
+  if (!last) return 'LIVE'
+  const map = {
+    football:   { p1: '1st Half', p2: '2nd Half', overtime: 'Extra Time' },
+    basketball: { p1: 'Q1', p2: 'Q2', p3: 'Q3', p4: 'Q4', overtime: 'OT' },
+    baseball:   { p1: '1st Inning', p2: '2nd Inning', p3: '3rd Inning', p4: '4th Inning', p5: '5th Inning', p6: '6th Inning', p7: '7th Inning', p8: '8th Inning', p9: '9th Inning', overtime: 'Extra Inning' },
+  }
+  return map[event.value.sport_slug]?.[last] ?? last
+})
+
+// ── Date / time helpers ───────────────────────────────
+function formatTime(dt) {
+  if (!dt) return '–'
+  return new Date(dt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+function formatDate(dt) {
+  if (!dt) return '–'
+  return new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }).replace('/', '.')
+}
+
+// ── Selections grid class ─────────────────────────────
+function gridClass(selections) {
+  if (!selections?.length) return 'grid-3'
+  const n = Math.min(selections.length, 3)
+  return `grid-${n}`
+}
+
+// ── Countdown ─────────────────────────────────────────
+const countdown = ref(null)
+let countdownTimer = null
+
+function updateCountdown() {
+  if (!event.value?.start_time || event.value.status !== 'pending') {
+    countdown.value = null
+    return
+  }
+  const diff = new Date(event.value.start_time) - Date.now()
+  if (diff <= 0) { countdown.value = null; return }
+  const days    = Math.floor(diff / 86400000)
+  const hours   = Math.floor((diff % 86400000) / 3600000)
+  const minutes = Math.floor((diff % 3600000) / 60000)
+  const seconds = Math.floor((diff % 60000) / 1000)
+  countdown.value = {
+    days:    String(days).padStart(2, '0'),
+    hours:   String(hours).padStart(2, '0'),
+    minutes: String(minutes).padStart(2, '0'),
+    seconds: String(seconds).padStart(2, '0'),
+  }
+}
+
+watch(event, () => {
+  clearInterval(countdownTimer)
+  updateCountdown()
+  if (event.value?.status === 'pending') {
+    countdownTimer = setInterval(updateCountdown, 1000)
+  }
+})
+
+onUnmounted(() => clearInterval(countdownTimer))
+
+// ── Grouped sports (sidebar) ──────────────────────────
+const groupedSports = computed(() =>
+  sports_store.sports.map(sport => ({
+    id:   sport.id,
+    slug: sport.slug,
+    name: sport.name,
+    icon: sport.icon,
+    count: leagues_store.leagues.filter(l => l.sport_id === sport.id).length,
+    countries: countries_store.countries
+      .filter(c => leagues_store.leagues.some(l => l.sport_id === sport.id && l.country_id === c.id))
+      .map(c => ({
+        id:   c.id,
+        slug: c.slug,
+        name: c.name,
+        leagues: leagues_store.leagues
+          .filter(l => l.sport_id === sport.id && l.country_id === c.id)
+          .map(l => ({ id: l.id, slug: l.slug, name: l.name })),
+      })),
+  }))
+)
+
+// ── Market tab scroll ─────────────────────────────────
 const smoothScroll = (el, distance) => {
-  const start     = el.scrollLeft
-  const target    = start + distance
-  const duration  = 1300
+  const start = el.scrollLeft
+  const target = start + distance
+  const duration = 500
   const startTime = performance.now()
-  const step = (currentTime) => {
-    const elapsed  = currentTime - startTime
-    const progress = Math.min(elapsed / duration, 1)
-    const ease = progress < 0.5
-      ? 16 * progress ** 5
-      : 1 - Math.pow(-2 * progress + 2, 5) / 2
+  const step = (now) => {
+    const p = Math.min((now - startTime) / duration, 1)
+    const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
     el.scrollLeft = start + (target - start) * ease
-    if (progress < 1) requestAnimationFrame(step)
+    if (p < 1) requestAnimationFrame(step)
   }
   requestAnimationFrame(step)
 }
 
-const scrollSportsLeft  = () => sportsScroll.value && smoothScroll(sportsScroll.value, -200)
-const scrollSportsRight = () => sportsScroll.value && smoothScroll(sportsScroll.value,  200)
+const scrollMarketsLeft  = () => marketsScroll.value && smoothScroll(marketsScroll.value, -200)
+const scrollMarketsRight = () => marketsScroll.value && smoothScroll(marketsScroll.value, 200)
 
-const POPULAR_CARDS_COUNT = 2
-const activeCardIndex = ref(0)
-const cardWidth = ref(0)
 
-const updateCardWidth = () => {
-  if (!eventsScroll.value) return
-  const containerWidth = eventsScroll.value.offsetWidth
-  cardWidth.value = window.innerWidth >= 1025 ? containerWidth / 2 : containerWidth
+
+
+function startPolling() {
+
+  stopPolling()
+  
+  pollInterval = setInterval(async () => {
+    
+    try {
+      
+      const res = await API.fetch_event(route.params.id)
+      
+      event.value = res.data ?? null
+    
+    } catch (err) {
+      
+      console.error('Polling error:', err)
+    
+    }
+  }, 5 * 60 * 1000)
 }
 
-onMounted(() => {
-  updateCardWidth()
-  window.addEventListener('resize', updateCardWidth)
-})
+function stopPolling() {
+  
+  clearInterval(pollInterval)
+
+}
+
+
 onUnmounted(() => {
-  window.removeEventListener('resize', updateCardWidth)
+  stopPolling()
+  clearInterval(countdownTimer)
 })
 
-const scrollEventsLeft  = () => { if (activeCardIndex.value > 0) activeCardIndex.value-- }
-const scrollEventsRight = () => { if (activeCardIndex.value < POPULAR_CARDS_COUNT - 1) activeCardIndex.value++ }
-
-const trackStyle = computed(() => ({
-  transform:  `translateX(${-activeCardIndex.value * cardWidth.value}px)`,
-  transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-  display:    'flex',
-  width:      '100%',
-  willChange: 'transform',
-}))
-
-const activeSport       = ref('football')
-const activeCountry     = ref(null)
-const activeLeague      = ref(null)
-const matchMode         = ref('prematch')
-const betMode           = ref('ordinary')
-const searchQuery       = ref('')
-const sliderHours       = ref(3)
-const sliderDays        = ref(7)
-const collapsedGroups   = ref([])
-const mobileSidebarOpen = ref(false)
-const mobileBetslipOpen = ref(false)
-const mobileSearchOpen  = ref(false)
-const betslip           = ref([])
-const betAmount         = ref('')
-const selectedOdds      = ref({})
-
-function selectSport(id) {
-  activeSport.value   = id
-  activeCountry.value = null
-  activeLeague.value  = null
-}
-
-function toggleCountry(id) {
-  activeCountry.value = activeCountry.value === id ? null : id
-  activeLeague.value  = null
-}
-
-function selectLeague(id) {
-  activeLeague.value = activeLeague.value === id ? null : id
-}
-
-function toggleGroup(id) {
-  const idx = collapsedGroups.value.indexOf(id)
-  if (idx === -1) collapsedGroups.value.push(id)
-  else collapsedGroups.value.splice(idx, 1)
-}
-
-const filteredEvents = computed(() => {
-  let groups = allEvents.filter(g => g.sportId === activeSport.value)
-  if (activeLeague.value) groups = groups.filter(g => g.leagueId === activeLeague.value)
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase()
-    groups = groups
-      .map(g => ({ ...g, events: g.events.filter(e => e.home.toLowerCase().includes(q) || e.away.toLowerCase().includes(q)) }))
-      .filter(g => g.events.length > 0)
-  }
-  return groups
-})
-
-const outcomeLabels = ['1', 'X', '2']
-const winnerLabels  = (event, oi) => oi === 0 ? event.home : oi === 2 ? event.away : 'Draw'
-
-function isOddSelected(eventId, oi) {
-  return !!selectedOdds.value[`${eventId}_${oi}`]
-}
-
-function toggleOdd(event, oi, group) {
-  const key = `${event.id}_${oi}`
-  if (selectedOdds.value[key]) {
-    delete selectedOdds.value[key]
-    const idx = betslip.value.findIndex(b => b.key === key)
-    if (idx !== -1) betslip.value.splice(idx, 1)
-  } else {
-    outcomeLabels.forEach((_, i) => {
-      const k = `${event.id}_${i}`
-      if (selectedOdds.value[k]) {
-        delete selectedOdds.value[k]
-        const idx = betslip.value.findIndex(b => b.key === k)
-        if (idx !== -1) betslip.value.splice(idx, 1)
-      }
-    })
-    selectedOdds.value[key] = true
-    betslip.value.push({
-      key,
-      league:       group.leagueName,
-      home:         event.home,
-      away:         event.away,
-      outcomeLabel: outcomeLabels[oi],
-      odd:          event.odds[oi],
-      winner:       winnerLabels(event, oi),
-    })
-  }
-  selectedOdds.value = { ...selectedOdds.value }
-}
-
-function removeBet(i) {
-  const bet = betslip.value[i]
-  delete selectedOdds.value[bet.key]
-  selectedOdds.value = { ...selectedOdds.value }
-  betslip.value.splice(i, 1)
-}
-
-function placeBet() {}
-
-const totalCoeff = computed(() =>
-  betslip.value.reduce((acc, b) => +(acc * b.odd).toFixed(2), 1)
-)
 </script>
 
 <style scoped>
@@ -432,23 +485,12 @@ const totalCoeff = computed(() =>
   height: 60px;
   gap: 8px;
   align-items: center;
-  overflow-y: auto;
 }
 
-.mob-all-sports-btn {
-  flex: 1;
-  background: var(--color2);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.mob-open-live-btn {
+.mob-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex: 1;
   background: var(--color2);
   border: 1px solid rgba(255,255,255,0.1);
@@ -482,6 +524,7 @@ const totalCoeff = computed(() =>
   padding: 9px 14px;
   border-radius: 8px;
   font-size: 14px;
+  font-family: inherit;
 }
 
 /* ── Main layout ── */
@@ -497,8 +540,37 @@ const totalCoeff = computed(() =>
   width: 100%;
   overflow-y: auto;
   scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .view-event::-webkit-scrollbar { display: none; }
+
+@media (max-width: 1024px) {
+  .main-layout { height: unset; justify-content: center; width: 95%; margin: 0 auto; }
+  .view-event  { overflow: unset; margin: 8px; }
+}
+
+/* ── State screen ── */
+.state-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px 20px;
+  color: rgba(255,255,255,0.35);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid rgba(61,196,90,0.15);
+  border-top-color: #3dc45a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══════════════════════════════
    MATCH CARD
@@ -509,8 +581,10 @@ const totalCoeff = computed(() =>
   border-radius: 12px;
   padding: 16px;
   color: white;
-  position: relative;
   box-sizing: border-box;
+}
+.match-card.is-live {
+  background: linear-gradient(180deg, #1a0505 0%, #2d0a0a 50%, #014b31 100%);
 }
 
 /* ── Card top ── */
@@ -525,32 +599,29 @@ const totalCoeff = computed(() =>
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  color: rgba(255,255,255,0.8);
 }
-
-.league img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
+.league img { width: 20px; height: 20px; object-fit: contain; }
 
 .top-actions {
   display: flex;
   gap: 14px;
   font-size: 16px;
-  color: white;
+  color: rgba(255,255,255,0.7);
   cursor: pointer;
 }
+.top-actions i:hover { color: #fbbf24; }
 
 /* ── Mobile time ── */
 .match-time h1 {
   font-size: 22px;
   font-weight: 800;
-  margin: 0 0 12px;
+  margin: 0 0 12px 58px;
 }
 
-/* ── Teams (mobile: column) ── */
+/* ── Teams ── */
 .teams {
   display: flex;
   flex-direction: column;
@@ -563,40 +634,40 @@ const totalCoeff = computed(() =>
   align-items: center;
   gap: 10px;
 }
+.team img { width: 26px; height: 26px; object-fit: contain; }
+.team span { font-size: 15px; font-weight: 700; }
 
-.team img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
+.team-initial {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+  flex-shrink: 0;
 }
 
-.team span {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-/* ── Center block (score or time) ── */
+/* ── Center block ── */
 .center-block {
   display: flex;
   align-items: center;
 }
 
+/* LIVE */
 .live-score-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .score {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 20px;
-  font-weight: 800;
+  gap: 6px;
+  font-size: 24px;
+  font-weight: 900;
 }
-
 .home-score { color: #2f9cff; }
-.separator  { color: white; }
+.separator  { color: rgba(255,255,255,0.5); }
 .away-score { color: #8cff4d; }
 
 .match-status {
@@ -604,93 +675,103 @@ const totalCoeff = computed(() =>
   align-items: center;
   gap: 6px;
   background: rgba(255,255,255,0.12);
-  padding: 5px 12px;
+  padding: 4px 12px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  width: fit-content;
 }
-
 .dot {
-  width: 6px;
-  height: 6px;
-  background: white;
+  width: 6px; height: 6px;
+  background: #e03030;
   border-radius: 50%;
+  animation: pulse 1.4s ease-in-out infinite;
 }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
 
-/* prematch center block */
-.prematch-time {
+/* Period scores breakdown */
+.period-scores-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.period-col {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 36px;
+}
+.period-col.is-fulltime {
+  background: rgba(224,48,48,0.15);
+  border: 1px solid rgba(224,48,48,0.25);
+}
+.period-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.06em;
+}
+.period-col.is-fulltime .period-label { color: rgba(224,48,48,0.8); }
+.period-vals {
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
 }
 
+/* PREMATCH */
+.prematch-time {
+  display: flex;
+  text-align: center;
+  flex-direction: column;
+  gap: 6px;
+}
 .prematch-time h2 {
-  margin: 0;
+  margin: 0 auto;
+  display: block;
   font-size: 26px;
   font-weight: 900;
   line-height: 1;
 }
-
 .match-date {
   font-size: 13px;
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.55);
+  font-weight: 500;
 }
 
-/* ── Countdown ── */
+/* Countdown */
 .countdown {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255,255,255,0.12);
+  gap: 6px;
+  background: rgba(255,255,255,0.1);
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   width: fit-content;
-  margin-top: 16px;
+  margin-top: 8px;
 }
-
 .time-box { text-align: center; }
-
-.time-box h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.time-box small {
-  font-size: 11px;
-  color: rgba(255,255,255,0.75);
-}
-
-.countdown > span {
-  font-size: 20px;
-  font-weight: 700;
-  margin-top: -8px;
-}
+.time-box h2 { margin: 0; font-size: 20px; font-weight: 800; line-height: 1; }
+.time-box small { font-size: 10px; color: rgba(255,255,255,0.6); }
+.countdown > span { font-size: 18px; font-weight: 700; margin-top: -8px; color: rgba(255,255,255,0.5); }
 
 /* ══════════════════════════════
    DESKTOP MATCH CARD
 ══════════════════════════════ */
 @media (min-width: 1025px) {
-  .match-card {
-    text-align: center;
-    padding: 20px 24px;
-  }
+  .match-card { padding: 20px 24px; }
 
-  /* league centered, actions absolute right */
   .card-top {
     justify-content: center;
     position: relative;
     margin-bottom: 24px;
   }
+  .top-actions { position: absolute; right: 0; }
 
-  .top-actions {
-    position: absolute;
-    right: 0;
-  }
-
-  /* teams: horizontal row */
   .teams {
     flex-direction: row;
     align-items: center;
@@ -699,41 +780,21 @@ const totalCoeff = computed(() =>
     margin-bottom: 0;
   }
 
-  /* home: name on left, logo facing center */
-  .team-home {
-    flex-direction: row-reverse;
-    flex: 1;
-    justify-content: flex-start;
-  }
-
-  /* away: logo facing center, name on right */
-  .team-away {
-    flex-direction: row;
-    flex: 1;
-    justify-content: flex-start;
-  }
-
-  .team img { width: 32px; height: 32px; }
+  .team-home { flex-direction: row-reverse; flex: 1; justify-content: flex-start; }
+  .team-away { flex-direction: row; flex: 1; justify-content: flex-start; }
+  .team img { width: 36px; height: 36px; }
   .team span { font-size: 16px; }
 
-  /* center block stacked vertically */
   .center-block {
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
   }
 
-  .live-score-card {
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .score { font-size: 28px; font-weight: 900; }
-
-  /* countdown centered */
-  .countdown { margin: 20px auto 0; }
+  .live-score-card { align-items: center; }
+  .score { font-size: 32px; }
+  .countdown { margin: 16px auto 0; }
 }
 
 /* ══════════════════════════════
@@ -742,7 +803,6 @@ const totalCoeff = computed(() =>
 .market-tabbar {
   background: var(--secondary-gradient-background-color2);
   border-radius: 10px;
-  margin: 10px 0;
   border-bottom: 1px solid rgba(255,255,255,0.07);
   display: flex;
   align-items: center;
@@ -754,6 +814,7 @@ const totalCoeff = computed(() =>
   flex: 1;
   overflow-x: auto;
   scrollbar-width: none;
+  gap: 4px;
 }
 .market-tabs-inner::-webkit-scrollbar { display: none; }
 
@@ -761,20 +822,20 @@ const totalCoeff = computed(() =>
   display: flex;
   align-items: center;
   border: 0;
-  margin: 0 4px;
   border-radius: 8px;
-  padding: 8px 20px;
+  padding: 8px 18px;
   background: #00533a;
-  color: white;
+  color: rgba(255,255,255,0.75);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.18s;
   white-space: nowrap;
   min-width: max-content;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
 }
-
-.market-item:hover { background: #006b4a; }
-.market-item.active { background-color: var(--color1); }
-.market-item-name { font-size: 13px; font-weight: 600; }
+.market-item:hover  { background: #006b4a; color: #fff; }
+.market-item.active { background: var(--color1); color: #002a1c; }
 
 .tab-arrow {
   padding: 5px 10px;
@@ -789,4 +850,129 @@ const totalCoeff = computed(() =>
   align-items: center;
   justify-content: center;
 }
+.tab-arrow:hover { background: rgba(255,255,255,0.12); }
+
+/* Market search (desktop) */
+.market-search-wrap {
+  position: relative;
+  align-items: center;
+}
+.search-icon {
+  position: absolute;
+  left: 12px;
+  width: 14px; height: 14px;
+  color: rgba(255,255,255,0.3);
+  pointer-events: none;
+}
+.market-search-input {
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #fff;
+  padding: 9px 14px 9px 34px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.market-search-input:focus { border-color: var(--color2); }
+.market-search-input::placeholder { color: rgba(255,255,255,0.2); }
+
+/* ══════════════════════════════
+   MARKETS PANEL
+══════════════════════════════ */
+.markets-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 40px;
+}
+
+.market-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  color: #000;
+}
+
+.market-card-header {
+  padding: 10px 16px;
+  background: var(--secondary-gradient-background);
+  color: #fff;
+}
+.market-card-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── Selections grid ── */
+.selections-grid {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+.selections-grid.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.selections-grid.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.selections-grid.grid-1 { grid-template-columns: repeat(1, 1fr); }
+
+@media (max-width: 480px) {
+  .selections-grid.grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Odd button ── */
+.odd-btn {
+  height: 52px;
+  background: linear-gradient(160deg, #f7faf7 0%, #eef3ee 100%);
+  border: 1px solid #d4e4d4;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  padding: 0 8px;
+  position: relative;
+  overflow: hidden;
+}
+.odd-btn:hover:not(:disabled) {
+  background: linear-gradient(160deg, #edfaf0 0%, #d9f2e0 100%);
+  border-color: #b0c43d;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(61,196,90,0.18);
+}
+.odd-btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+
+.odd-btn.selected {
+  background: linear-gradient(160deg, #b0c43d 0%, #96a82d 100%);
+  border-color: #a6a82d;
+  box-shadow: 0 3px 10px rgba(171,196,61,0.35);
+}
+
+.odd-btn.suspended {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.odd-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.38);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+.odd-btn.selected .odd-label { color: rgba(255,255,255,0.75); }
+
+.odd-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1a3320;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.odd-btn.selected .odd-value { color: #fff; }
 </style>

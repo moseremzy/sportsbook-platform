@@ -14,17 +14,16 @@
       <div class="footer-col">
         <h4>INFORMATION</h4>
         <ul>
-          <li><router-link to="#">Betting Terms &amp; Conditions</router-link></li>
-          <li><router-link to="#">Gambling Rules</router-link></li>
-          <li><router-link to="#">Affiliate program</router-link></li>
-          <li><router-link to="#">License</router-link></li>
+          <li><router-link to="/terms-and-condition">Betting Terms &amp; Conditions</router-link></li>
+          <li><router-link to="/affliate-program">Affiliate program</router-link></li>
+          <li><router-link to="/license">License</router-link></li>
         </ul>
       </div>
 
       <div class="footer-col">
         <h4>CONTACT US</h4>
         <ul>
-          <li><router-link to="mailto:support@primeodds.com">support@primeodds.com</router-link></li>
+          <li><router-link :to="`mailto:${settings_store.settings.email}`">{{settings_store.settings.email}}</router-link></li>
         </ul>
       </div>
 
@@ -63,12 +62,17 @@
 
     <!-- Copyright -->
     <div class="footer-bottom">
-      <p>Copyright © 2026, vikingbet.win. All rights reserved.</p>
+      <p>Copyright © 2026, {{settings_store.settings.website}}. All rights reserved.</p>
     </div>
   </footer>
 </template>
 
 <script setup>
+
+import { useSettingsStore } from '../../stores/settings'
+
+const settings_store = useSettingsStore()
+
 </script>
 
 <style scoped>

@@ -27,7 +27,7 @@
 
       <nav class="sidebar-nav">
         <!-- Home -->
-        <router-link to="#" class="nav-item nav-item--home" @click="interactive_store.toggleNav()">
+        <router-link to="/" exact-active-class = "nav-item--active" class="nav-item nav-item--home" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M3 12L12 3l9 9"/>
             <path d="M9 21V12h6v9"/>
@@ -39,7 +39,7 @@
         <!-- Products section -->
         <div class="nav-section-label">Products</div>
 
-        <router-link to="#" class="nav-item" @click="interactive_store.toggleNav()">
+        <router-link to="/events?match_mode=pending" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <rect x="3" y="3" width="7" height="9" rx="1.5"/>
             <rect x="14" y="3" width="7" height="5" rx="1.5"/>
@@ -49,15 +49,15 @@
           Bets
         </router-link>
 
-        <a href="#" class="nav-item" @click="interactive_store.toggleNav()">
+        <router-link to="/events?match_mode=live" class="nav-item" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <circle cx="12" cy="12" r="9"/>
             <path d="M12 8v4l3 3"/>
           </svg>
           LIVE Sport
-        </a>
+        </router-link>
 
-        <router-link to="#" class="nav-item" @click="interactive_store.toggleNav()">
+        <router-link to="/account/bet-history" class="nav-item" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <rect x="3" y="4" width="18" height="16" rx="2"/>
             <path d="M8 2v4M16 2v4M3 10h18"/>
@@ -65,7 +65,7 @@
           My bets
         </router-link>
 
-        <router-link to="#" class="nav-item" @click="interactive_store.toggleNav()">
+        <router-link to="/coming-soon" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <circle cx="12" cy="12" r="9"/>
             <circle cx="12" cy="12" r="3"/>
@@ -74,7 +74,7 @@
           Casino
         </router-link>
 
-        <router-link to="#" class="nav-item" @click="interactive_store.toggleNav()">
+        <router-link to="/account/deposits" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <rect x="2" y="7" width="20" height="14" rx="2"/>
             <path d="M16 3H8L6 7h12l-2-4z"/>
@@ -85,7 +85,7 @@
         <!-- Divider -->
         <div class="nav-divider"/>
 
-        <router-link to="#" class="nav-item" @click="interactive_store.toggleNav()">
+        <router-link to="/support" exact-active-class = "nav-item--active" class="nav-item" @click="interactive_store.toggleNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
@@ -207,6 +207,11 @@ const activeTab = ref('bets')
 }
 
 .nav-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
+.nav-item--active {
   background: rgba(255,255,255,0.06);
   color: #fff;
 }

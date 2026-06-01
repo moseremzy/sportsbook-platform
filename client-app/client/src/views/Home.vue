@@ -35,56 +35,36 @@
       <!-- Matches / Live Sport -->
       <div class="tab-block">
         <div class="tab-block-header">
-          <button
-            class="tab-pill"
-            :class="{ active: matchTab === 'matches' }"
-            @click="matchTab = 'matches'"
-          >Matches</button>
-          <button
-            class="tab-pill tab-pill--live"
-            :class="{ active: matchTab === 'live' }"
-            @click="matchTab = 'live'"
-          >
+          <button class="tab-pill">Matches</button>
+          <button class="tab-pill tab-pill--live">
             <span class="live-dot"/>LIVE Sport
           </button>
         </div>
         <div class="tab-scroll-wrap">
-          <div class="tab-chips auto-scroll-inner" :style="scrollStyle('sports')">
-            <template v-if="matchTab === 'matches'">
+          <router-link to = "/events" class="tab-chips auto-scroll-inner" :style="scrollStyle('sports')">
               <div v-for="(s, i) in matchSportsLoop" :key="i" class="chip">
                 <img :src="s.img" class="chip-icon" :alt="s.name" />
                 {{ s.name }}
               </div>
-            </template>
-          </div>
+          </router-link>
         </div>
       </div>
 
       <!-- Casino / Live Casino -->
       <div class="tab-block">
         <div class="tab-block-header">
-          <button
-            class="tab-pill"
-            :class="{ active: casinoTab === 'casino' }"
-            @click="casinoTab = 'casino'"
-          >Casino</button>
-          <button
-            class="tab-pill tab-pill--live"
-            :class="{ active: casinoTab === 'live' }"
-            @click="casinoTab = 'live'"
-          >
-            <span class="live-dot"/>LIVE Casino
+          <button class="tab-pill">Casino</button>
+          <button class="tab-pill tab-pill--live">
+          <span class="live-dot"/>LIVE Casino
           </button>
         </div>
         <div class="tab-scroll-wrap">
-          <div class="tab-chips auto-scroll-inner" :style="scrollStyle('casino')">
-            <template v-if="casinoTab === 'casino'">
+          <router-link to = "/coming-soon" class="tab-chips auto-scroll-inner" :style="scrollStyle('casino')">
               <div v-for="(p, i) in casinoLoop" :key="i" class="chip">
                 <img :src="p.img" class="chip-icon" :alt="p.name" />
                 {{ p.name }}
               </div>
-            </template>
-          </div>
+          </router-link>
         </div>
       </div>
     </section>
@@ -98,16 +78,16 @@
         <span class="section-title">Sports are trending</span>
       </div>
       <div class="cards-scroll-wrap">
-        <div class="cards-inner auto-scroll-inner" :style="scrollStyle('trendingSports')">
-          <div
-            v-for="(sport, i) in trendingSportsLoop"
+        <div class="cards-inner auto-scroll-inner">
+          <router-link to = "/events"
+            v-for="(sport, i) in trendingSports"
             :key="i"
             class="sport-card"
             :style="{ '--card-color': sport.color }"
           >
             <img :src="sport.img" :alt="sport.name" class="sport-card-img" />
             <!-- <span class="sport-card-label">{{ sport.name }}</span> -->
-          </div>
+          </router-link>
         </div>
       </div>
     </section>
@@ -117,32 +97,88 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import uclImg from '../assets/static_images/LEAGUES/UCL.png'
 import eplImg from '../assets/static_images/LEAGUES/EPL.png'
-import ligaImg from '../assets/static_images/LEAGUES/LIGA.png'
-import bundImg from '../assets/static_images/LEAGUES/BUNDESLIGA.png'
 
-import basebImg from '../assets/static_images/SPORTS/baseball.svg'
-import basketbImg from '../assets/static_images/SPORTS/basketball.svg'
 import footbImg from '../assets/static_images/SPORTS/football.svg'
 
 import basebCard from '../assets/static_images/SPORTS/baseball.jpg'
 import basketbCard from '../assets/static_images/SPORTS/basketball.jpg'
 import footbCard from '../assets/static_images/SPORTS/football.jpg'
 
-// ── Data ─────────────────────────────────────────────
-const leagues = [
-  { sport: 'Football', name: 'UEFA Champions...', img: uclImg },
-  { sport: 'Football', name: 'England. Premier...',img: eplImg },
-  { sport: 'Football', name: 'Spain. La Liga',     img: ligaImg },
-  { sport: 'Football', name: 'Bundeliga', img: bundImg },
-]
+import { useLeaguesStore } from "../stores/leagues"
+import { usesportsStore } from "../stores/sports"
 
-const matchSports = [
-  { name: 'Football',       img: footbImg },
-  { name: 'Basketball',   img: basketbImg },
-  { name: 'Baseball',   img: basebImg }
-]
+const leagues_store = useLeaguesStore()
+const sports_store = usesportsStore()
+
+// ── Data ─────────────────────────────────────────────
+const leagues = computed(() => {
+
+  return leagues_store.leagues.map(league => {
+
+    const sport = sports_store.sports.find(
+      s => s.id === league.sport_id
+    )
+
+    return {
+      id: league.id,
+      name: league.name,
+      slug: league.slug,
+      img: eplImg, //league.logo,
+      sport: sport?.name || "Unknown"
+    }
+
+  })
+
+})
+
+
+const matchSports = computed(() => {
+    
+    return sports_store.sports?.map((s) => {
+    return {
+           name: s.name,
+           img: footbImg
+         }
+    })
+
+})
+
+
+const trendingSports = computed(() => {
+
+  const map = {
+    football: {
+      color: "#c0392b",
+      img: footbCard
+    },
+    basketball: {
+      color: "#c0392b",
+      img: basketbCard
+    },
+    baseball: {
+      color: "#c0392b",
+      img: basebCard
+    }
+  }
+
+  return sports_store.sports
+    .filter(s =>
+      ["football", "basketball", "baseball"].includes(s.slug)
+    )
+    .map(s => {
+      const extra = map[s.slug]
+
+      return {
+        id: s.id,
+        name: s.name.toUpperCase(),
+        slug: s.slug,
+        color: extra?.color,
+        img: extra?.img
+      }
+    })
+
+})
 
 const casinoProviders = [
   { name: 'VibraGaming',   img: 'https://placehold.co/20x20/fff/333?text=V' },
@@ -154,21 +190,13 @@ const casinoProviders = [
   { name: 'EGT',           img: 'https://placehold.co/20x20/fff/333?text=E' },
 ]
  
-const trendingSports = [
-  { name: 'FOOTBALL',   color: '#c0392b', img: footbCard },
-  { name: 'BASKETBALL', color: '#c0392b', img: basketbCard },
-  { name: 'BASEBALL',   color: '#c0392b', img: basebCard } 
-]
-
-
 // ── Tabs ──────────────────────────────────────────────
 const matchTab  = ref('matches')
 const casinoTab = ref('casino')
 
 // ── Duplicated lists for infinite seamless scroll ─────
-const matchSportsLoop    = computed(() => [...matchSports,         ...matchSports])
+const matchSportsLoop    = computed(() => [...matchSports.value,         ...matchSports.value])
 const casinoLoop         = computed(() => [...casinoProviders,     ...casinoProviders])
-const trendingSportsLoop = computed(() => [...trendingSports,      ...trendingSports])
 
 // px offset per track
 const offsets = reactive({
@@ -183,7 +211,7 @@ const itemWidths = {
 // full width of one copy of each list
 const loopWidths = computed(() => ({
   leagues:        leagues.length         * itemWidths.leagues,
-  sports:         matchSports.length     * itemWidths.sports,
+  sports:         matchSports.value.length     * itemWidths.sports,
   casino:         casinoProviders.length * itemWidths.casino,
   trendingSports: trendingSports.length  * itemWidths.trendingSports
 }))
@@ -420,6 +448,7 @@ onUnmounted(() => intervals.forEach(clearInterval))
 }
 
 .tab-chips {
+  text-decoration: none;
   gap: 8px;
 }
 

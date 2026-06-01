@@ -5,65 +5,15 @@ const SMTP_HOST = process.env.SMTP_HOST
 const SMTP_USER = process.env.SMTP_USER
 const SMTP_PASS = process.env.SMTP_PASS
 const nodemailer = require("nodemailer");
+const { getSettings } = require('./settings')
 
 
 module.exports = class MIDDLEWARES {
 
-  static async SendConfirmationMail(req, res, useremail, confirmationCode, fullname) {
-
-    var smtpConfig = {
-        host: SMTP_HOST,
-        port:  465,
-        secure: true,
-        auth:{
-            user: SMTP_USER,
-            pass: SMTP_PASS
-        }
-    };
-
-    const transporter = nodemailer.createTransport(smtpConfig);
-
-    // Point to the template folder
-    const handlebarOptions = {
-        viewEngine: {
-            partialsDir: path.resolve('./views/'),
-            defaultLayout: false,
-        },
-        viewPath: path.resolve('./views/')
-    };
-
-    // Use a template file with nodemailer
-    transporter.use('compile', hbs(handlebarOptions));
-
-    const mailOptions = {
-        from: `Tech By Cas <${SMTP_USER}>`, // sender address
-        to: useremail,
-        subject: 'Confirmation Email',
-        attachments: [{
-            filename: 'logo.png',
-            path: './images/logo.png',
-            cid: "logo"
-        }],
-        template: 'confirmation_mail', // the name of the template file i.e email.handlebars
-        context: {
-            confirmationCode: confirmationCode,
-            fullname: fullname
-        }
-    };
-
-    transporter.sendMail(mailOptions)
-    .then(() => {
-        console.log('confirmation mail sent');
-    })
-    .catch(err => {
-        console.error('confirmation mail failed:', err);
-    });
-}
-
-
-
 //Contact us Email
 static async contact_us_email(req, res, email, fullname, phone, message) {
+
+    const settings = await getSettings() // returns cached object, no DB call
 
     var smtpConfig = {
         host: SMTP_HOST,
@@ -90,8 +40,8 @@ var transporter = nodemailer.createTransport(smtpConfig);
       transporter.use('compile', hbs(handlebarOptions));
       
       const mailOptions = {
-        from: `Tech By Cas <${SMTP_USER}>`, // sender address
-        to: "techbycas@gmail.com", //Tech By Cas email
+        from: `${settings.website.toUpperCase()} <${SMTP_USER}>`, // sender address
+        to: `${settings.email}`, //Tech By Cas email
         subject: 'User Complaint',
         attachments: [{
             filename: 'logo.png',
@@ -104,6 +54,7 @@ var transporter = nodemailer.createTransport(smtpConfig);
             fullname: fullname,
             phone: phone,
             message: message,
+            website: settings.website,
         }
       };      
 
@@ -120,7 +71,7 @@ var transporter = nodemailer.createTransport(smtpConfig);
          
                 } else {
                     
-                  resolve("Your request has been recieved. We will get back to you as soon as possible via the email provided below. Thank you for choosing Tech By Cas.");
+                  resolve("Your request has been recieved. We will get back to you as soon as possible.");
                 
                 }
             });
@@ -148,6 +99,8 @@ var transporter = nodemailer.createTransport(smtpConfig);
 //Password Reset  Email
 static async send_reset_pass_email(req, res, useremail, token, fullname) {
 
+    const settings = await getSettings() // returns cached object, no DB call
+
     var smtpConfig = {
         host: SMTP_HOST,
         port:  465,
@@ -174,7 +127,7 @@ var transporter = nodemailer.createTransport(smtpConfig);
       transporter.use('compile', hbs(handlebarOptions));
       
       var mailOptions = {
-        from: `Tech By Cas <${SMTP_USER}>`, // sender address
+        from: `${settings.website.toUpperCase()} <${SMTP_USER}>`, // sender address
         to: useremail,
         subject: 'Reset Password',
         attachments: [{
@@ -185,7 +138,8 @@ var transporter = nodemailer.createTransport(smtpConfig);
         template: 'password_reset_mail', // the name of the template file i.e email.handlebars
         context:{
             token: token,
-            fullname: fullname
+            fullname: fullname,
+            website: settings.website
         }
       };      
         // Wrap sendMail in a Promise
@@ -201,9 +155,7 @@ var transporter = nodemailer.createTransport(smtpConfig);
          
                 } else {
                  
-                 resolve(`We’ve sent a password reset link to your email address.
-                  Please check your inbox (and spam folder) and follow the instructions to create a new password.
-                  If you don’t receive the email within a few minutes, try again or contact support.`);
+                 resolve(`We’ve sent a password reset link to your email address.`);
         
                 }
             });
@@ -226,7 +178,9 @@ var transporter = nodemailer.createTransport(smtpConfig);
 
 
 //send order notification email to admin
-static send_admin_order_notification(order_id, orderDate, data) {
+static async send_admin_deposit_notification(fullname, email, amount, payment_method, currency, locale, date) {
+
+    const settings = await getSettings() // returns cached object, no DB call
 
     const smtpConfig = {
         host: SMTP_HOST,
@@ -251,24 +205,78 @@ static send_admin_order_notification(order_id, orderDate, data) {
     transporter.use('compile', hbs(handlebarOptions));
 
     const mailOptions = {
-        from: `Tech By Cas <${SMTP_USER}>`,
-        to: 'techbycas@gmail.com',
-        subject: 'Order Notification',
+        from: `${settings.website.toUpperCase()} <${SMTP_USER}>`,
+        to: `${settings.email}`,
+        subject: 'Deposit Notification',
         attachments: [{
             filename: 'logo.png',
             path: './images/logo.png',
             cid: "logo"
         }],
-        template: 'admin_order_notification',
+        template: 'admin_deposit_notification',
         context: {
-            order_id,
-            customerName: data.customer_name,
-            customerEmail: data.email,
-            customerPhone: data.phone,
-            totalAmount: new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(data.total_amount),
-            paymentMethod: data.payment_method,
-            total_items: data.total_items,
-            orderDate
+            fullname: fullname,
+            email: email,
+            amount: new Intl.NumberFormat(locale, { style: 'currency', currency: currency }).format(amount),
+            payment_method: payment_method,
+            website: settings.website,
+            date: date
+        }
+    };
+
+    transporter.sendMail(mailOptions)
+        .then(() => {
+            console.log('Admin notification email sent');
+        })
+        .catch(err => {
+            console.error('Admin email failed:', err);
+        });
+}
+
+
+//send bet notification email to admin
+static async send_admin_bet_notification(fullname, email, betSlipId, date) {
+
+    const settings = await getSettings() // returns cached object, no DB call
+
+    const smtpConfig = {
+        host: SMTP_HOST,
+        port: 465,
+        secure: true,
+        auth: {
+            user: SMTP_USER,
+            pass: SMTP_PASS
+        }
+    };
+
+    const transporter = nodemailer.createTransport(smtpConfig);
+
+    const handlebarOptions = {
+        viewEngine: {
+            partialsDir: path.resolve('./views/'),
+            defaultLayout: false,
+        },
+        viewPath: path.resolve('./views/')
+    };
+
+    transporter.use('compile', hbs(handlebarOptions));
+
+    const mailOptions = {
+        from: `${settings.website.toUpperCase()} <${SMTP_USER}>`,
+        to: `${settings.email}`,
+        subject: 'Bet Notification',
+        attachments: [{
+            filename: 'logo.png',
+            path: './images/logo.png',
+            cid: "logo"
+        }],
+        template: 'admin_bet_notification',
+        context: {
+            fullname: fullname,
+            email: email,
+            bet_slip_id: betSlipId,
+            website: settings.website,
+            date: date
         }
     };
 

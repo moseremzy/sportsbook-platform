@@ -1,6 +1,5 @@
 <template>
 <form class="auth-form" @submit.prevent="validation">
-    {{formvalues.phone}}
 <div class = "field-group">
     <div class="input-group">
     <font-awesome-icon
@@ -273,12 +272,23 @@ async function validation() {
     interactive_store.toggle_loading_overlay(true)
    
     try {
+
+    const data = {
+      fullname: formvalues.fullname,
+      phone: formvalues.phone,
+      email: formvalues.email,
+      password: formvalues.confirm_password
+    }
         
-    const response = await API.register(formvalues); 
+    const response = await API.register(data); 
 
-    interactive_store.toggle_loading_overlay(false)
+    user_store.logged_In(response.user, response.isAuthenticated)
+        
+    interactive_store.backend_message = `Welcome ${response.user.fullname}`
 
-    return router.push({ name: "email-activation", query: {confirmationEmail: formvalues.email} })
+    interactive_store.display_success_alert_box()
+
+    router.push({name: 'home'})
     
     } catch (error) {
 
@@ -291,6 +301,7 @@ async function validation() {
     }
   }
  }
+    interactive_store.toggle_loading_overlay(false)
 }
 </script>
 

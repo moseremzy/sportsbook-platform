@@ -14,6 +14,8 @@ export const useInteractiveStore = defineStore("interactive", {
 
     activeNav: null,
 
+    page_to_go: ''
+
  }),
 
 
@@ -63,7 +65,14 @@ export const useInteractiveStore = defineStore("interactive", {
                ? null
                : navName;
 
-      }     
+      },
+      
+      set_page_to_go(page) {
+        
+        this.page_to_go = page
+
+      }
+
   }
 
 })

@@ -2,40 +2,39 @@
   <!-- ── RIGHT: BETSLIP (desktop) ── -->
   <aside class="betslip-panel desktop-only">
     <div class="betslip-header">
-      <span>Betslip ({{ betslip.length }})</span>
+      <span>Betslip ({{ events_store.bet_slip.length }})</span>
     </div>
     <div class="betslip-tabs">
       <!-- <button class="bs-tab" :class="{ active: betMode === 'ordinary' }" @click="$emit('update:betMode', 'ordinary')">Ordinary</button> -->
       <button class="bs-tab bs-tab--express">Express</button>
     </div>
     <div class="betslip-items">
-      <div v-if="betslip.length === 0" class="betslip-empty">Add selections to your betslip</div>
-      <div v-for="(bet, i) in betslip" :key="i" class="betslip-item">
+      <div v-if="events_store.bet_slip.length === 0" class="betslip-empty">Add selections to your betslip</div>
+      <div v-for="(bet, i) in events_store.bet_slip" :key="i" class="betslip-item">
         <div class="bet-item-top">
           <span class="bet-league">{{ bet.league }}</span>
-          <button class="bet-remove" @click="$emit('remove-bet', i)">✕</button>
+          <button class="bet-remove" @click="events_store.remove_bet(bet.selectionId)">✕</button>
         </div>
         <div class="bet-teams">{{ bet.home }}<br/>{{ bet.away }}</div>
         <div class="bet-outcome-row">
-          <span class="bet-outcome">{{ bet.outcomeLabel }}</span>
+          <span class="bet-outcome">Winner: {{ bet.label }}</span>
           <span class="bet-odd-val">{{ bet.odd }}</span>
         </div>
-        <div class="bet-winner-label">Winner: {{ bet.winner }}</div>
       </div>
     </div>
-    <div class="betslip-footer" v-if="betslip.length > 0">
+    <div class="betslip-footer" v-if="events_store.bet_slip.length > 0">
       <div class="total-coeff">
         <span>Total Coefficient:</span>
-        <span class="coeff-val">{{ totalCoeff }}</span>
+        <span class="coeff-val">{{ events_store.total_odds.toFixed(2) }}</span>
       </div>
       <div class="total-profit">
           <span>POSSIBLE PROFIT:</span>
-          <span>50000</span>
+          <span>{{events_store.possible_profit(stake)}}</span>
       </div>
       <div class="bet-amount-row">
-        <input type="number" :value="betAmount" @input="$emit('update:betAmount', $event.target.value)" class="bet-amount-input" placeholder="Bet amount" />
+        <input type="number" v-model = "stake" class="bet-amount-input" placeholder="Bet amount" />
       </div>
-      <button class="place-bet-btn" @click="$emit('place-bet')">Place Bet</button>
+      <button class="place-bet-btn" @click="placeBet">Place Bet</button>
     </div>
   </aside>
 
@@ -53,13 +52,13 @@
 
   <button class="mob-betslip-fab mobile-only" @click="interactive_store.toggleNav('bet_slip_bar')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
-    <span v-if="betslip.length > 0" class="fab-badge">{{ betslip.length }}</span>
+    <span v-if="events_store.bet_slip.length > 0" class="fab-badge">{{ events_store.bet_slip.length }}</span>
   </button>
 
   <Transition name="slide-up">
     <div class="mob-betslip-drawer mobile-only" v-if="interactive_store.activeNav === 'bet_slip_bar'">
       <div class="mob-betslip-header">
-        <span>Betslip ({{ betslip.length }})</span>
+        <span>Betslip ({{ events_store.bet_slip.length }})</span>
         <button @click="interactive_store.toggleNav()">✕</button>
       </div>
       <div class="betslip-tabs">
@@ -67,54 +66,112 @@
         <button class="bs-tab bs-tab--express">Express</button>
       </div>
       <div class="betslip-items">
-        <div v-if="betslip.length === 0" class="betslip-empty">Add selections to your betslip</div>
-        <div v-for="(bet, i) in betslip" :key="i" class="betslip-item">
+        <div v-if="events_store.bet_slip.length === 0" class="betslip-empty">Add selections to your betslip</div>
+        <div v-for="(bet, i) in events_store.bet_slip" :key="i" class="betslip-item">
           <div class="bet-item-top">
             <span class="bet-league">{{ bet.league }}</span>
-            <button class="bet-remove" @click="$emit('remove-bet', i)">✕</button>
+            <button class="bet-remove" @click="events_store.remove_bet(bet.selectionId)">✕</button>
           </div>
           <div class="bet-teams">{{ bet.home }} vs {{ bet.away }}</div>
           <div class="bet-outcome-row">
-            <span class="bet-outcome">{{ bet.outcomeLabel }}</span>
+            <span class="bet-outcome">Winner: {{ bet.label }}</span>
             <span class="bet-odd-val">{{ bet.odd }}</span>
           </div>
         </div>
       </div>
-      <div class="betslip-footer" v-if="betslip.length > 0">
+      <div class="betslip-footer" v-if="events_store.bet_slip.length > 0">
         <div class="total-coeff">
           <span>Total Coefficient:</span>
-          <span class="coeff-val">{{ totalCoeff }}</span>
+          <span class="coeff-val">{{ events_store.total_odds.toFixed(2) }}</span>
         </div>
         <div class="total-profit">
           <span>POSSIBLE PROFIT:</span>
-          <span>50000</span>
+          <span>{{events_store.possible_profit(stake)}}</span>
         </div>
         <div class="bet-amount-row">
-        <input type="number" :value="betAmount" @input="$emit('update:betAmount', $event.target.value)" class="bet-amount-input" placeholder="Bet amount" />
+        <input type="number" v-model = "stake" class="bet-amount-input" placeholder="Bet amount" />
       </div>
-      <button class="place-bet-btn" @click="$emit('place-bet')">Place Bet</button>
+      <button class="place-bet-btn" @click ="placeBet">Place Bet</button>
     </div>
     </div>
   </Transition>
 </template>
 
 <script setup>
-
+import { ref, computed, watch } from 'vue'
 import { useInteractiveStore } from '../stores/interactive';
- 
+import { useEventsStore } from '../stores/events'
+import API from '../api/index'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '../stores/user';
 const interactive_store = useInteractiveStore()
+const events_store = useEventsStore()
+const user_store = useUserStore()
 
-defineProps({
-  betslip:           { type: Array,   required: true },
-  betAmount:         { type: [String, Number], default: '' },
-  totalCoeff:        { type: Number,  default: 1 },
-})
 
-defineEmits([
-  'remove-bet',
-  'place-bet',
-  'update:betAmount',
-])
+const route   = useRoute()
+const router  = useRouter()
+
+const stake = ref('')
+
+async function placeBet() {
+
+  try {
+
+  if (!user_store.isAuthenticated) {
+
+    return router.push({name: 'sign-in'})
+
+  }
+
+  if (events_store.bet_slip.length < 1) {
+    
+    interactive_store.backend_message = 'Bet slip is empty'
+
+    interactive_store.display_error_alert_box()
+
+    return
+
+  }
+
+   interactive_store.toggle_loading_overlay(true)
+    
+  const payload = {
+    total_odd: events_store.total_odds,
+    stake: stake.value,
+    possible_win: events_store.possible_profit(stake.value),
+    selections: events_store.bet_slip.map(b => ({
+      event_id: b.eventId,
+      selection_id: b.selectionId,
+      odd:          b.odd,
+    }))
+  }
+  
+  const response = await API.place_bet(payload)
+
+  interactive_store.backend_message = 'Bet placed successfully!'
+
+  stake.value = ""
+
+  events_store.bet_slip = [];
+
+  localStorage.setItem('bet_slip_events', []); 
+
+  user_store.fetch_user()
+
+  interactive_store.display_success_alert_box()
+
+  } catch (error) {
+
+    console.log(error)
+    
+  }
+  
+ interactive_store.toggle_loading_overlay(false)
+
+}
+
+
 </script>
 
 <style scoped>
@@ -127,7 +184,7 @@ defineEmits([
 .betslip-panel {
   width: 280px;
   flex-shrink: 0;
-  background: #0d2416;
+  background: var( --secondary-gradient-background-color2);
   border-left: 1px solid rgba(255,255,255,0.07);
   flex-direction: column;
   overflow-y: auto;
@@ -292,7 +349,7 @@ defineEmits([
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 400;
-  background: #0d2416;
+  background: var( --secondary-gradient-background-color2);
   border-radius: 20px 20px 0 0;
   border-top: 1px solid rgba(255,255,255,0.1);
   height: 85vh;

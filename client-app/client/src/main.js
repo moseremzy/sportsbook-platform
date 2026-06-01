@@ -3,10 +3,10 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
 import { useUserStore } from './stores/user';
-import { useOrdersStore } from './stores/orders';
-import { useProductStore } from './stores/products';
-import { useCategoriesStore } from './stores/categories';
-import { useSettingStore } from './stores/settings';
+import { useSettingsStore } from './stores/settings';
+import { useCountriesStore } from './stores/countries';
+import { usesportsStore } from './stores/sports';
+import { useLeaguesStore } from './stores/leagues';
 import { useInteractiveStore } from './stores/interactive';
 
 import './assets/css/global.css'
@@ -47,10 +47,10 @@ app.use(router); // 2️⃣ Then load router (guards can now read store)
 // Fetch data before mounting the app
 const initializeApp = async () => {
   const userStore = useUserStore();
-  const ordersStore = useOrdersStore();
-  const productStore = useProductStore();
-  const categoriesStore = useCategoriesStore();
-  const settingStore = useSettingStore();
+  const settings_store = useSettingsStore();
+  const countriesStore = useCountriesStore()
+  const sportsStore = usesportsStore();
+  const leaguesStore = useLeaguesStore();
 
   try {
     
@@ -62,20 +62,22 @@ const initializeApp = async () => {
   
     await Promise.all([ // fetch public data
 
-      productStore.fetch_products(),
+      countriesStore.fetch_countries(),
 
-      categoriesStore.fetch_categories(),
+      sportsStore.fetch_sports(),
 
-      settingStore.fetch_settings()
+      leaguesStore.fetch_leagues(),
+
+      settings_store.fetch_settings()
 
     ])
 
     
-    if (userStore.user) { // Fetch orders only if logged in
+    // if (userStore.user) { // Fetch orders only if logged in
       
-      await ordersStore.fetch_orders();
+    //   await ordersStore.fetch_orders();
     
-    }
+    // }
 
   } catch (error) {
   

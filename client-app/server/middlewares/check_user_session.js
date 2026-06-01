@@ -1,6 +1,6 @@
 module.exports = (req, res, next) => {
-
-    if (req.session.isAuthenticated && req.session.user_id) {  
+ 
+    if (req.isAuthenticated() && req.user.id) {  
 
         next()
         
@@ -9,7 +9,7 @@ module.exports = (req, res, next) => {
         return res.status(401).json({
             success: false,
             message: "Not logged in.",
-            isAuthenticated: req.session.isAuthenticated
+            isAuthenticated: req.isAuthenticated()
         });
 
     }

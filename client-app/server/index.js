@@ -5,9 +5,18 @@ const port = process.env.PORT || 9000;
 const router = require("./routes/router.js");
 const cors = require("cors");
 const path = require("path");
-const app = express();
+const session = require("express-session");
+const passport = require("passport");
+const sessionConfig = require("./middlewares/session");
+const { getSettings } = require('./middlewares/settings')
 const base_url = process.env.BASE_URL
+const app = express();
 
+
+app.set("trust proxy", 1);
+
+
+require("./cron/cron_job"); // THIS triggers the cron file
 
 app.use(cors({
   origin: `${base_url}`,   // your Vue frontend
@@ -15,22 +24,44 @@ app.use(cors({
 }));
 
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ Routes
+app.use(session(sessionConfig));
+
+require("./middlewares/passport");
+
+app.use(passport.initialize());
+app.use(passport.session());
 app.use('/api', router);
 
 
 // Production static serving (if needed)
+const fs = require("fs")
+
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(__dirname + "/dist/"));
-    app.get("*", (req, res) => {
-        res.sendFile(__dirname + "/dist/index.html");
+    
+  app.use(express.static(__dirname + "/dist/"));
+    
+    app.get("*", async (req, res) => {
+        
+      const settings = await getSettings() // already cached, no DB hit
+
+        let html = fs.readFileSync(path.join(__dirname, '/dist/index.html'), 'utf-8')
+
+        // Replace every hardcoded occurrence
+        html = html.replaceAll('techbycas.com', settings.website + '.win')
+
+        res.send(html)
+
     });
 }
 
-app.listen(port, () => {
+app.listen(port, async () => {
+
+  await getSettings()
+
   console.log("server started on port", port);
+
 });
