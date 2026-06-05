@@ -49,7 +49,7 @@
             <!-- TOP BAR -->
             <div class="card-top">
               <div class="league">
-                <img v-if="event.league_logo" :src="event.league_logo" alt="" />
+                <img v-if="event.league_logo" :src="`http://localhost:9000${event.league_logo}`" alt="" />
                 <span>{{ event.sport_name }}. {{ event.league_name }}</span>
               </div>
               <div class="top-actions">
@@ -330,9 +330,9 @@ const currentPeriodLabel = computed(() => {
   const last = keys.at(-1)
   if (!last) return 'LIVE'
   const map = {
-    football:   { p1: '1st Half', p2: '2nd Half', overtime: 'Extra Time' },
-    basketball: { p1: 'Q1', p2: 'Q2', p3: 'Q3', p4: 'Q4', overtime: 'OT' },
-    baseball:   { p1: '1st Inning', p2: '2nd Inning', p3: '3rd Inning', p4: '4th Inning', p5: '5th Inning', p6: '6th Inning', p7: '7th Inning', p8: '8th Inning', p9: '9th Inning', overtime: 'Extra Inning' },
+    football:   { p1: '1st Half', p2: '2nd Half', fulltime: 'Fulltime', overtime: 'Extra Time' },
+    basketball: { p1: 'Q1', p2: 'Q2', p3: 'Q3', p4: 'Q4', fulltime: 'Fulltime', overtime: 'OT' },
+    baseball:   { p1: '1st Inning', p2: '2nd Inning', p3: '3rd Inning', p4: '4th Inning', p5: '5th Inning', p6: '6th Inning', p7: '7th Inning', p8: '8th Inning', p9: '9th Inning', fulltime: 'Fulltime', overtime: 'Extra Inning' },
   }
   return map[event.value.sport_slug]?.[last] ?? last
 })
@@ -393,7 +393,7 @@ const groupedSports = computed(() =>
     id:   sport.id,
     slug: sport.slug,
     name: sport.name,
-    icon: sport.icon,
+    icon: sport.img,
     count: leagues_store.leagues.filter(l => l.sport_id === sport.id).length,
     countries: countries_store.countries
       .filter(c => leagues_store.leagues.some(l => l.sport_id === sport.id && l.country_id === c.id))
@@ -401,9 +401,10 @@ const groupedSports = computed(() =>
         id:   c.id,
         slug: c.slug,
         name: c.name,
+        flag: c.flag,
         leagues: leagues_store.leagues
           .filter(l => l.sport_id === sport.id && l.country_id === c.id)
-          .map(l => ({ id: l.id, slug: l.slug, name: l.name })),
+          .map(l => ({ id: l.id, slug: l.slug, name: l.name, logo: l.logo })),
       })),
   }))
 )
@@ -939,11 +940,11 @@ onUnmounted(() => {
   overflow: hidden;
 }
 .odd-btn:hover:not(:disabled) {
-  background: linear-gradient(160deg, #edfaf0 0%, #d9f2e0 100%);
   border-color: #b0c43d;
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(61,196,90,0.18);
 }
+
 .odd-btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
 
 .odd-btn.selected {

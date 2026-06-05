@@ -8,56 +8,73 @@
 
     <div class="sub_container" :style="interactive_store.sub_container_css">
 
-      <HEADER page_name="edit-country" searchbox_placeholder="Search countries" />
+      <HEADER page_name="edit-league" searchbox_placeholder="Search leagues" />
 
       <div class="page-title-row">
-        <h1>Edit Country</h1>
-        <button class="back-btn" @click="router.push('/countries')">
-          ← Back to Countries
+        <h1>Edit League</h1>
+        <button class="back-btn" @click="router.push('/account/leagues')">
+          ← Back to Leagues
         </button>
       </div>
 
       <div class="add-item-form-container">
         <form class="add-item-form grid-form">
 
-          <!-- Country Name -->
+          <!-- League Name -->
           <div class="form-group">
-            <label class="form-label">Country Name</label>
-            <input type="text" v-model="country_info.name" class="form-input" placeholder="e.g. Nigeria" />
-            <p class="err">{{ country_info_error.name_err }}</p>
-          </div>
-
-          <!-- Country Code -->
-          <div class="form-group">
-            <label class="form-label">Country Code</label>
-            <input type="text" v-model="country_info.code" class="form-input" placeholder="e.g. NG" maxlength="10" />
-            <p class="err">{{ country_info_error.code_err }}</p>
+            <label class="form-label">League Name</label>
+            <input type="text" v-model="league_info.name" class="form-input" placeholder="e.g. Premier League" />
+            <p class="err">{{ league_info_error.name_err }}</p>
           </div>
 
           <!-- Slug -->
-          <div class="form-group grid-full">
+          <div class="form-group">
             <label class="form-label">Slug <span class="hint">(auto-generated, editable)</span></label>
-            <input type="text" v-model="country_info.slug" class="form-input" placeholder="e.g. nigeria" />
-            <p class="err">{{ country_info_error.slug_err }}</p>
+            <input type="text" v-model="league_info.slug" class="form-input" placeholder="e.g. premier-league" />
+            <p class="err">{{ league_info_error.slug_err }}</p>
           </div>
 
-          <!-- Current Flag -->
-          <div class="form-group grid-full" v-if="country_info.flag">
-            <label class="form-label">Current Flag</label>
-            <img :src="`http://localhost:7000${country_info.flag}`" alt="Current flag" class="flag-preview" />
+          <!-- Sport -->
+          <div class="form-group">
+            <label class="form-label">Sport</label>
+            <select v-model="league_info.sport_id" class="form-input">
+              <option value="" disabled>Select sport</option>
+              <option v-for="sport in sports_store.sports" :key="sport.id" :value="sport.id">
+                {{ sport.name }}
+              </option>
+            </select>
+            <p class="err">{{ league_info_error.sport_err }}</p>
           </div>
 
-          <!-- New Flag Upload -->
+          <!-- Country -->
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <select v-model="league_info.country_id" class="form-input">
+              <option value="" disabled>Select country</option>
+              <option v-for="country in countries_store.countries" :key="country.id" :value="country.id">
+                {{ country.name }}
+              </option>
+            </select>
+            <p class="err">{{ league_info_error.country_err }}</p>
+          </div>
+
+          <!-- Current Logo -->
+          <div class="form-group grid-full" v-if="league_info.logo">
+            <label class="form-label">Current Logo</label>
+            <img :src="`http://localhost:7000${league_info.logo}`" alt="Current logo" class="flag-preview" />
+          </div>
+
+          <!-- New Logo Upload -->
           <div class="form-group grid-full">
-            <label class="form-label">Change Flag <span class="hint">(leave empty to keep current)</span></label>
-            <input type="file" ref="flagImage" name = "country_image" accept="image/*" class="form-input" />
-            <p class="err">{{ country_info_error.flag_err }}</p>
+            <label class="form-label">Change Logo <span class="hint">(leave empty to keep current)</span></label>
+            <input type="file" ref="logoImage" accept="image/*" class="form-input" />
+            <p class="err">{{ league_info_error.logo_err }}</p>
           </div>
 
-          <!-- New Flag Preview -->
-          <div class="form-group grid-full" v-if="flagPreview">
-            <label class="form-label">New Flag Preview</label>
-            <img :src="flagPreview" alt="Flag preview" class="flag-preview" />
+          <!-- New Logo Preview -->
+          <div class="form-group grid-full" v-if="logoPreview">
+            <label class="form-label">New Logo Preview</label>
+            <img :src="logoPreview" alt="Logo preview" class="flag-preview" />
           </div>
 
           <!-- Submit -->
@@ -79,7 +96,9 @@ import { ref, reactive, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useInteractiveStore } from '@/stores/interactive'
 import { useAdminStore } from '@/stores/admin'
+import { useLeaguesStore } from '@/stores/leagues'
 import { useCountriesStore } from '@/stores/countries'
+import { useSportsStore } from '@/stores/sports'
 import HEADER from '../components/Header.vue'
 import OVERLAY from '../components/modals/loading_overlay.vue'
 import SIDEBAR from '../components/SideBar.vue'
@@ -87,50 +106,54 @@ import API from '../api/index'
 
 const interactive_store = useInteractiveStore()
 const admin_store       = useAdminStore()
+const leagues_store     = useLeaguesStore()
 const countries_store   = useCountriesStore()
+const sports_store      = useSportsStore()
 const router            = useRouter()
 const route             = useRoute()
 
-const country_id  = route.params.id
-const flagImage   = ref(null)
-const flagPreview = ref(null)
+const league_id   = route.params.id
+const logoImage   = ref(null)
+const logoPreview = ref(null)
 
-const country_info = reactive({
+const league_info = reactive({
   name: '',
-  code: '',
   slug: '',
-  flag: '',
+  sport_id: '',
+  country_id: '',
+  logo: '',
 })
 
-const country_info_error = reactive({
+const league_info_error = reactive({
   name_err: '',
-  code_err: '',
   slug_err: '',
-  flag_err: '',
+  sport_err: '',
+  country_err: '',
+  logo_err: '',
 })
 
-// ── Load existing country data ────────────────────────
-const existing = countries_store.countries.find(c => c.id == country_id)
+// ── Load existing league data ─────────────────────────
+const existing = leagues_store.leagues.find(l => l.id == league_id)
 if (!existing) {
-  router.push('/countries')
+  router.push('/account/leagues')
 } else {
-  country_info.name = existing.name
-  country_info.code = existing.code
-  country_info.slug = existing.slug
-  country_info.flag = existing.flag
+  league_info.name       = existing.name
+  league_info.slug       = existing.slug
+  league_info.sport_id   = existing.sport_id
+  league_info.country_id = existing.country_id
+  league_info.logo       = existing.logo
 }
 
 // ── Auto-generate slug from name ─────────────────────
-watch(() => country_info.name, (val) => {
-  country_info.slug = val.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-  country_info.code = val.slice(0, 2).toUpperCase()
+watch(() => league_info.name, (val) => {
+  league_info.slug = val.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 })
 
-// ── New flag preview ──────────────────────────────────
-watch(flagImage, () => {
-  const file = flagImage.value?.files?.[0]
-  if (file) flagPreview.value = URL.createObjectURL(file)
-  else flagPreview.value = null
+// ── New logo preview ──────────────────────────────────
+watch(logoImage, () => {
+  const file = logoImage.value?.files?.[0]
+  if (file) logoPreview.value = URL.createObjectURL(file)
+  else logoPreview.value = null
 })
 
 // ── Auth guard ───────────────────────────────────────
@@ -146,32 +169,37 @@ watch(() => admin_store.isAuthenticated, (isAuthenticated) => {
 function validate() {
   let valid = true
 
-  if (!country_info.name.trim()) {
-    country_info_error.name_err = 'Country name is required'
+  if (!league_info.name.trim()) {
+    league_info_error.name_err = 'League name is required'
     valid = false
-  } else { country_info_error.name_err = '' }
+  } else { league_info_error.name_err = '' }
 
-  if (!country_info.code.trim()) {
-    country_info_error.code_err = 'Country code is required'
+  if (!league_info.slug.trim()) {
+    league_info_error.slug_err = 'Slug is required'
     valid = false
-  } else { country_info_error.code_err = '' }
+  } else { league_info_error.slug_err = '' }
 
-  if (!country_info.slug.trim()) {
-    country_info_error.slug_err = 'Slug is required'
+  if (!league_info.sport_id) {
+    league_info_error.sport_err = 'Please select a sport'
     valid = false
-  } else { country_info_error.slug_err = '' }
+  } else { league_info_error.sport_err = '' }
 
-  const file = flagImage.value?.files?.[0]
+  if (!league_info.country_id) {
+    league_info_error.country_err = 'Please select a country'
+    valid = false
+  } else { league_info_error.country_err = '' }
+
+  const file = logoImage.value?.files?.[0]
   if (file) {
     if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'].includes(file.type)) {
-      country_info_error.flag_err = 'Invalid image file'
+      league_info_error.logo_err = 'Invalid image file'
       valid = false
     } else if (file.size > 2 * 1024 * 1024) {
-      country_info_error.flag_err = 'Image too large (max 2MB)'
+      league_info_error.logo_err = 'Image too large (max 2MB)'
       valid = false
-    } else { country_info_error.flag_err = '' }
+    } else { league_info_error.logo_err = '' }
   } else {
-    country_info_error.flag_err = ''
+    league_info_error.logo_err = ''
   }
 
   return valid
@@ -183,29 +211,30 @@ async function submitEdit() {
   if (!validate()) return
 
   const formData = new FormData()
-  formData.append('id', country_id)
-  formData.append('name', country_info.name)
-  formData.append('code', country_info.code.toUpperCase())
-  formData.append('slug', country_info.slug)
-  formData.append('current_flag', country_info.flag) // e.g. /resources/countries/country_image_123.png
+  formData.append('id', league_id)
+  formData.append('name', league_info.name)
+  formData.append('slug', league_info.slug)
+  formData.append('sport_id', league_info.sport_id)
+  formData.append('country_id', league_info.country_id)
+  formData.append('current_logo', league_info.logo)
 
-  const file = flagImage.value?.files?.[0]
+  const file = logoImage.value?.files?.[0]
 
-  if (file) formData.append('country_image', file, file.name)
+  if (file) formData.append('league_image', file, file.name)
 
   interactive_store.toggle_loading_overlay(true)
 
   try {
 
-    const res = await API.update_country(formData)
+    const res = await API.update_league(formData)
 
-    await countries_store.fetch_countries()
+    await leagues_store.fetch_leagues()
 
     interactive_store.backend_message = res.message
-    
+
     interactive_store.display_success_alert_box()
 
-    setTimeout(() => router.push('/account/countries'), 1200)
+    setTimeout(() => router.push('/account/leagues'), 1200)
 
   } catch (err) {
     
@@ -221,7 +250,6 @@ async function submitEdit() {
 
 }
 </script>
-
 
 <style scoped>
 /* DESKTOP VIEW */
@@ -355,26 +383,6 @@ async function submitEdit() {
   border-radius: 4px;
   border: 1px solid #ddd;
 }
-
-.page-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.back-btn {
-  background-color: #0E2E45;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.back-btn:hover { background-color: #1a4a6e; }
 
 .submit-button {
   padding: 12px 20px;

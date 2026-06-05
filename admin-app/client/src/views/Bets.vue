@@ -2,17 +2,17 @@
   <div class="container" :style="interactive_store.container_css">
 
     <OVERLAY/>
-    <SUCCESSALERTBOX>{{interactive_store.backend_message}}</SUCCESSALERTBOX>
-    <ERRORALERTBOX>{{interactive_store.backend_message}}</ERRORALERTBOX>
+    <SUCCESSALERTBOX>{{ interactive_store.backend_message }}</SUCCESSALERTBOX>
+    <ERRORALERTBOX>{{ interactive_store.backend_message }}</ERRORALERTBOX>
     <SIDEBAR />
 
     <div class="sub_container" :style="interactive_store.sub_container_css">
 
-      <HEADER page_name="leagues" searchbox_placeholder="Search by name" />
+      <HEADER page_name="bet-slips" searchbox_placeholder="Search by name or status" />
 
       <div class="page-title-row">
-        <h1>Leagues</h1>
-        <router-link class="add-btn" to="/account/add-league">+ Add League</router-link>
+        <h1 v-if="route.query.name">{{ route.query.name }}'s Bet Slips</h1>
+        <h1 v-else>Bet Slips</h1>
       </div>
 
       <div class="customer-table-container">
@@ -24,59 +24,30 @@
           <table class="customer-table" v-if="paginatedItems.length > 0">
             <thead>
               <tr>
-                <th>Logo</th>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>Sport</th>
-                <th>Country</th>
+                <th>Full Name</th>
+                <th>Total Odds</th>
+                <th>Stake</th>
+                <th>Possible Win</th>
                 <th>Status</th>
+                <th>Placed At</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="league in paginatedItems" :key="league.id">
+              <tr v-for="slip in paginatedItems" :key="slip.id">
+                <td>{{ slip.fullname }}</td>
+                <td>{{ slip.total_odd }}</td>
+                <td>{{ formatAmount(slip.stake) }}</td>
+                <td>{{ formatAmount(slip.possible_win) }}</td>
                 <td>
-                  <img
-                    v-if="league.logo"
-                    :src="`http://localhost:7000${league.logo}`"
-                    :alt="league.name"
-                    class="flag-img"
-                  />
-                  <span v-else class="no-flag">—</span>
+                  <span :class="['status-badge', slip.status]">{{ slip.status }}</span>
                 </td>
-                <td>{{ league.name }}</td>
-                <td>{{ league.slug }}</td>
-                <td>{{ league.sport_name }}</td>
-                <td>{{ league.country_name }}</td>
+                <td>{{ formatDate(slip.created_at) }}</td>
                 <td>
-                  <span :class="league.status == 'enabled' ? 'status-active' : 'status-inactive'">
-                    {{ league.status == 'enabled' ? 'Enabled' : 'Disabled' }}
-                  </span>
-                </td>
-                <td>
-                <template v-if="!league.is_seeded">
-                  <button
-                    class="action-btn enable"
-                    v-if="league.status != 'enabled'"
-                    @click="toggleStatus(league, 'enabled')"
-                    :disabled="loadingId === league.id"
-                  >
-                    {{ loadingId === league.id ? 'Updating...' : 'Enable' }}
-                  </button>
-                  <button
-                    class="action-btn disable"
-                    v-else
-                    @click="toggleStatus(league, 'disabled')"
-                    :disabled="loadingId === league.id"
-                  >
-                    {{ loadingId === league.id ? 'Updating...' : 'Disable' }}
-                  </button>
-                  <router-link :to="`/account/edit-league/${league.id}`" class="action-btn edit">
-                    Edit
+                  <router-link :to="`/account/bet-detail/${slip.id}`" class="action-btn manage">
+                    Manage
                   </router-link>
-                </template>
-                <span v-else style="color: #aaa; font-size: 13px;">—</span>
-              </td>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -109,42 +80,52 @@ import PAGINATION from '../components/Pagination.vue'
 import OVERLAY from '../components/modals/loading_overlay.vue'
 import { useInteractiveStore } from '@/stores/interactive'
 import { useAdminStore } from '@/stores/admin'
-import { useLeaguesStore } from '@/stores/leagues'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import API from '@/api/index'
 
 const interactive_store = useInteractiveStore()
 const admin_store       = useAdminStore()
-const leagues_store     = useLeaguesStore()
 const router            = useRouter()
+const route         = useRoute()
 
+
+const bet_slips    = ref([])
 const currentPage  = ref(1)
 const itemsPerPage = 20
-const loadingId    = ref(null)
 
+// ── Auth Guard ───────────────────────────────
 watch(() => admin_store.isAuthenticated, (isAuthenticated) => {
   if (!isAuthenticated) {
     interactive_store.backend_message = 'Session expired'
-    interactive_store.display_success_alert_box(true)
+    interactive_store.display_error_alert_box(true)
     setTimeout(() => router.push({ path: '/login' }), 1000)
   }
 })
 
-const leagues = computed(() => leagues_store.leagues)
-
+// ── Reset page on search ─────────────────────
 watch(() => interactive_store.query, () => {
   currentPage.value = 1
 })
 
+// ── Filter by user_id if present in query ────
+const slips = computed(() => {
+  const all = bet_slips.value
+  return route.query.user_id
+    ? all.filter(s => s.user_id == route.query.user_id)
+    : all
+})
+
+// ── Filter by search query ───────────────────
 const filteredItems = computed(() => {
   const q = interactive_store.query?.toLowerCase().trim()
-  if (!q) return leagues.value
-  return leagues.value.filter(l =>
-    l.name?.toLowerCase().includes(q) ||
-    l.slug?.toLowerCase().includes(q)
+  if (!q) return slips.value
+  return slips.value.filter(s =>
+    s.fullname?.toLowerCase().includes(q) ||
+    s.status?.toLowerCase().includes(q)
   )
 })
 
+// ── Paginate ─────────────────────────────────
 const paginatedItems = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filteredItems.value.slice(start, start + itemsPerPage)
@@ -154,38 +135,39 @@ const totalPages = computed(() =>
   Math.ceil(filteredItems.value.length / itemsPerPage)
 )
 
-async function toggleStatus(league, status) {
-
-  loadingId.value = league.id
-
+// ── Fetch Bet Slips ──────────────────────────
+async function fetchBetSlips() {
+  
   try {
+
+    const res = await API.get_bet_slips()
     
-    const res = await API.toggle_league_status({ id: league.id, status })
-      
-    league.status = status
-    
-    interactive_store.backend_message = res.message
-    
-    interactive_store.display_success_alert_box()
-    
+    bet_slips.value = res.bet_slips
+  
   } catch (err) {
     
-   console.log(err)
-  
-  } finally {
+    interactive_store.backend_message = err.message
     
-    loadingId.value = null
+    interactive_store.display_error_alert_box()
   
   }
 
 }
 
+// ── Format helpers ───────────────────────────
+function formatDate(dt) {
+  return new Date(dt).toLocaleString()
+}
+
+function formatAmount(amount) {
+  return Number(amount).toLocaleString()
+}
+
 onMounted(() => {
   interactive_store.clearQuery()
+  fetchBetSlips()
 })
 </script>
-
-
 
 <style scoped>
 /* DESKTOP VIEW */
@@ -197,7 +179,6 @@ onMounted(() => {
     margin: 0;
     padding: 0;
   }
-
   div.sub_container {
     display: block;
     margin: 0 0 0 250px;
@@ -206,7 +187,6 @@ onMounted(() => {
     width: calc(100% - 250px);
     overflow-y: auto;
   }
-
   div.sub_container h1 {
     margin: 0px auto 5px auto;
     color: #0E2E45;
@@ -224,14 +204,12 @@ onMounted(() => {
     margin: 0;
     padding: 0;
   }
-
   div.sub_container {
     display: block;
     margin: 0;
     padding: 0 15px 50px 15px;
     width: 100%;
   }
-
   div.sub_container h1 {
     margin: 0px auto 5px auto;
     color: #0E2E45;
@@ -248,22 +226,6 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 
-.add-btn {
-  background-color: #0E2E45;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-}
-
-.add-btn:hover { background-color: #1a4a6e; }
-
 /* ── Table ── */
 .customer-table-container {
   width: 100%;
@@ -275,7 +237,7 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 20px;
-  min-width: 600px;
+  min-width: 700px;
 }
 
 .customer-table th,
@@ -292,20 +254,19 @@ onMounted(() => {
 
 .customer-table tr:hover { background-color: #f9f9f9; }
 
-/* ── Flag ── */
-.flag-img {
-  width: 36px;
-  height: 24px;
-  object-fit: cover;
-  border-radius: 3px;
-  border: 1px solid #ddd;
+/* ── Status Badge ── */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
 }
-
-.no-flag { color: #aaa; font-size: 13px; }
-
-/* ── Status ── */
-.status-active  { color: green; font-weight: bold; }
-.status-inactive { color: red; font-weight: bold; }
+.status-badge.pending  { background: #fff3cd; color: #856404; }
+.status-badge.won      { background: #d4edda; color: #155724; }
+.status-badge.lost     { background: #f8d7da; color: #721c24; }
+.status-badge.partial  { background: #cce5ff; color: #004085; }
+.status-badge.void     { background: #e2e3e5; color: #6c757d; }
 
 /* ── Action buttons ── */
 .action-btn {
@@ -316,36 +277,16 @@ onMounted(() => {
   border-radius: 5px;
   cursor: pointer;
   transition: opacity 0.2s;
-}
-
-.action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.action-btn.enable {
-  background-color: #e6f9ec;
-  color: #1a7a3c;
-  border: 1px solid #b2dfca;
-}
-
-.action-btn.enable:hover:not(:disabled) { background-color: #c8f0d8; }
-
-.action-btn.disable {
-  background-color: #fdecea;
-  color: #c0392b;
-  border: 1px solid #f5c6c2;
-}
-
-.action-btn.disable:hover:not(:disabled) { background-color: #fad4d0; }
-
-
-.action-btn.edit {
   text-decoration: none;
+  display: inline-block;
+}
+
+.action-btn.manage {
   background-color: #fff8e1;
   color: #b8860b;
   border: 1px solid #f0d080;
-  margin-left: 6px;
 }
-
-.action-btn.edit:hover { background-color: #fdeea3; }
+.action-btn.manage:hover { background-color: #fdeea3; }
 
 /* ── Table wrapper ── */
 .table-wrapper {

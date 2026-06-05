@@ -41,7 +41,7 @@
           </div>
            
           <div class = "flex_items" style="background-color:  rgb(175, 18, 18);">
-            <router-link to = "#" style="text-decoration: none;">
+            <router-link to = "/account/users" style="text-decoration: none;">
             <p>TOTAL USERS</p>
             <h1>{{users_store.total_users}}</h1>
             <hr>
@@ -50,13 +50,14 @@
           </div> 
 
           <div class = "flex_items" style="background-color:  rgb(120, 65, 15);">
-            <router-link to = "#" style="text-decoration: none;">
-            <p>TOTAL BETSLIPS</p>
-            <h1>8</h1>
+            <router-link to = "/account/bets" style="text-decoration: none;">
+            <p>BETSLIPS</p>
+            <h1>...</h1>
             <hr>
             <small>Betslip</small>
             </router-link>
           </div> 
+
 
         </div>   <!-- GRID 1 -->
 

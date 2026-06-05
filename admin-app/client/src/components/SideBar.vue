@@ -1,21 +1,80 @@
 <template>
 <div class = "side_bar" :style = "interactive_store.side_bar_css">
-    <h3><font-awesome-icon class="fa-solid fa-user-tie" icon="fa-solid fa-user-tie" id = "user_tie"/> TECH BY CAS </h3>
+    <h3><font-awesome-icon class="fa-solid fa-user-tie" icon="fa-solid fa-user-tie" id = "user_tie"/> {{settings_store.settings.website.toUpperCase()}} </h3>
     <hr>
     <ul>
-       <li v-if = "admin_store.authorized(['super_admin', 'editor'])"><router-link exact-active-class = "active-link" to = "/account/dashboard"><font-awesome-icon class="fa-solid fa-user-tie icons" icon="fa-solid fa-gauge"/> Dashboard</router-link></li> 
-       <li v-if = "admin_store.authorized(['super_admin'])"><router-link exact-active-class = "active-link" to = "/account/countries"><font-awesome-icon class="fa-solid fa-cart-shopping icons" icon="fa-solid fa-cart-shopping"/> Countries</router-link></li> 
-       <li v-if = "admin_store.authorized(['super_admin'])"><router-link exact-active-class = "active-link" to = "/account/leagues"><font-awesome-icon class="fa-solid fa-cart-shopping icons" icon="fa-solid fa-cart-shopping"/> Leagues <strong v-if = "filteredItems > 0" style = "background-color: red; margin-left: 5px; padding: 3px 7px; font-size: 13px; border-radius: 100%;">{{filteredItems}}</strong></router-link></li> 
-       <li v-if = "admin_store.authorized(['super_admin'])">
-        <router-link exact-active-class="active-link" to="/account/device-records">
-            <font-awesome-icon class="icons" icon="fa-solid fa-mobile-screen-button"/>
+       <li v-if="admin_store.authorized(['super_admin', 'editor'])">
+        <router-link exact-active-class="active-link" to="/account/dashboard">
+            <font-awesome-icon class="icons" icon="fa-solid fa-gauge-high" />
+            Dashboard
+        </router-link>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin'])">
+        <router-link exact-active-class="active-link" to="/account/countries">
+            <font-awesome-icon class="icons" icon="fa-solid fa-earth-africa" />
+            Countries
+        </router-link>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin'])">
+        <router-link exact-active-class="active-link" to="/account/leagues">
+            <font-awesome-icon class="icons" icon="fa-solid fa-trophy" />
+            Leagues
+            <strong
+            v-if="filteredItems > 0"
+            style="background-color:red;margin-left:5px;padding:3px 7px;font-size:13px;border-radius:100%;"
+            >
+            {{ filteredItems }}
+            </strong>
+        </router-link>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin'])">
+        <router-link exact-active-class="active-link" to="/account/events">
+            <font-awesome-icon class="icons" icon="fa-solid fa-calendar-days" />
             Events
         </router-link>
-        </li> 
-       <!-- <li v-if = "admin_store.authorized(['super_admin','editor'])"><router-link exact-active-class = "active-link" to = "/account/items"><font-awesome-icon class="fa-solid fa-mobile-phone icons" icon="fa-solid fa-mobile-phone"/> Teams</router-link></li>  -->
-       <li v-if = "admin_store.authorized(['super_admin'])"><router-link exact-active-class = "active-link" to = "/account/customers"><font-awesome-icon class="fa-solid fa-user icons" icon="fa-solid fa-user"/> Users</router-link></li>
-       <li v-if = "admin_store.authorized(['super_admin', 'editor'])"><router-link exact-active-class = "active-link" to = "/account/settings"><font-awesome-icon class="fa-solid fa-user-cog icons" icon="fa-solid fa-user-cog"/>Account Settings</router-link></li> 
-       <li @click.prevent = "logout" v-if = "admin_store.isAuthenticated"><router-link to="#" class = "link" style="color: red;"><font-awesome-icon  class="fa-solid fa-sign-out icons" style="color: red;" icon="fa-solid fa-sign-out"/>Log Out</router-link></li>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin'])">
+        <router-link exact-active-class="active-link" to="/account/bets">
+            <font-awesome-icon class="icons" icon="fa-solid fa-ticket" />
+            Bets
+        </router-link>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin'])">
+        <router-link exact-active-class="active-link" to="/account/users">
+            <font-awesome-icon class="icons" icon="fa-solid fa-users" />
+            Users
+        </router-link>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin'])">
+        <router-link exact-active-class="active-link" to="/account/transactions">
+            <font-awesome-icon class="icons" icon="fa-solid fa-money-bill-transfer" />
+            Transactions
+        </router-link>
+        </li>
+
+        <li v-if="admin_store.authorized(['super_admin', 'editor'])">
+        <router-link exact-active-class="active-link" to="/account/settings">
+            <font-awesome-icon class="icons" icon="fa-solid fa-gear" />
+            Account Settings
+        </router-link>
+        </li>
+
+        <li @click.prevent="logout" v-if="admin_store.isAuthenticated">
+        <router-link to="#" class="link" style="color:red;">
+            <font-awesome-icon
+            class="icons"
+            style="color:red;"
+            icon="fa-solid fa-right-from-bracket"
+            />
+            Log Out
+        </router-link>
+        </li>
     </ul>
 </div>
 </template>
@@ -27,6 +86,8 @@ import { onMounted, onUnmounted, onUpdated, reactive, computed, toRaw, ref, watc
 
  import { useInteractiveStore } from '@/stores/interactive'
 
+ import { useSettingStore } from '../stores/settings'
+
  import { useAdminStore } from '@/stores/admin'
 
  import API from '../api'
@@ -34,6 +95,8 @@ import { onMounted, onUnmounted, onUpdated, reactive, computed, toRaw, ref, watc
  const interactive_store = useInteractiveStore()
 
  const admin_store = useAdminStore()
+
+ const settings_store = useSettingStore()
 
 
 // let filteredItems = computed(() => { //search for item

@@ -31,139 +31,14 @@ module.exports = class MIDDLEWARES {
         });
     }
 
-
-    // Check Stock Availability
-    static stock_availability(products) {
-
-      let out_of_stock = "";
-
-      let slightly_available = "";
-
-      const result = products.filter(item =>
-        
-        item.quantity > item.stock_quantity
-      
-      );
-
-      if (result.length === 0) {
-        
-        return null; // no problem
-      
-      }
-
-      result.forEach(item => {
-        
-        if (item.stock_quantity === 0) {
-          
-          out_of_stock += `${item.name}, `;
-        
-        } else {
-          
-          slightly_available += `${item.name}, `;
-        
-        }
-      
-      });
-
-      let message = "";
-
-      if (out_of_stock) {
-        
-        message += out_of_stock + "are out of stock. ";
-      
-      }
-
-      if (slightly_available) {
-        
-        message += slightly_available + "available but not in this quantity.";
-      
-      }
-
-      return message;
-
-    }
-
-
-    static async refundPayment(reference) {
-      
-      const payload = { transaction: reference };
-      
-    
-      try {
-       
-        const response = await axios.post(
-          "https://api.paystack.co/refund",
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-              "Content-Type": "application/json"
-            }
-          }
-        );
-    
-        if (response.data.status === false) {
-          
-          throw new Error("Refund failed");
-        
-        }
-    
-        return response.data;
-    
-      } catch (error) {
-        
-        throw new Error("Could not process refund");
-      
-      }
-    
-    }
-
-
-    static getPublicIdFromUrl(url) {
-      // Remove the domain + upload/ part
-      // Example: https://res.cloudinary.com/dkebpp1vm/image/upload/v1768382594/products/images/1768382594680-FB_IMG_15504165582320214.jpg
-      // Returns: products/images/1768382594680-FB_IMG_15504165582320214
-    
-      // Split after /upload/
-      const parts = url.split("/upload/");
-      
-      if (parts.length < 2) return null; // invalid URL
-    
-      let publicIdWithVersionAndExt = parts[1];
-    
-      // Remove version prefix like v1768382594/
-      publicIdWithVersionAndExt = publicIdWithVersionAndExt.replace(/^v\d+\//, "");
-    
-      // Remove file extension
-      const publicId = publicIdWithVersionAndExt.replace(/\.[^/.]+$/, "");
-    
-      return publicId;
-      
-    }
-
-
-    static slugify(name) {
-      return name
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '') // removes / + & etc
-        .replace(/\s+/g, '-')     // spaces → hyphen
-        .replace(/--+/g, '-');    // avoid double hyphens
-    }
-
-    
-    // Creates Confirmation Pin for Orders
-    static generateConfirmationPin() {
-      
-      return Math.floor(1000 + Math.random() * 9000); // Generates a 4-digit PIN
-
-    }
-
-
-    static generatePaymentReference(length = 10) { //for order id
-
-      return crypto.randomBytes(length).toString('hex').slice(0, length);
-
+    // ── Helper: promisify db.query ───────────────────────────
+    static query(db, sql, params = []) {
+      return new Promise((resolve, reject) => {
+        db.query(sql, params, (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        })
+      })
     }
 
 

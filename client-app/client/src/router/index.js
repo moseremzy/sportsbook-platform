@@ -166,32 +166,31 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
 
-  // ✅ All store calls inside the guard — Pinia is ready here
   const user_store        = useUserStore()
   const interactive_store = useInteractiveStore()
   const settings_store    = useSettingsStore()
 
-  const site = settings_store.settings?.website || ''
-
   interactive_store.toggle_loading_overlay(true)
 
-  // Dynamically append site name to every page title
-  document.title = to.meta.title
-    ? `${to.meta.title} - ${site}`
-    : `${site} | You Order, We Deliver.`
-
-  // Wait for user fetch if not done yet
+  // ── Wait for both user and settings if not fetched yet ──
   if (!user_store.isFetched) {
-    await user_store.fetch_user().catch(() => {})
+    await Promise.all([
+      user_store.fetch_user().catch(() => {}),
+      settings_store.fetch_settings().catch(() => {})
+    ])
   }
 
-  // Redirect unauthenticated users from protected pages
+  const site = settings_store.settings?.website || ''
+
+  document.title = to.meta.title
+    ? `${to.meta.title} - ${site}`
+    : `${site} | Betting Company.`
+
   if (to.meta.requiresAuth && !user_store.isAuthenticated) {
     interactive_store.set_page_to_go(to.name)
     return next({ name: `sign-in` })
   }
 
-  // Redirect authenticated users away from sign-in
   if (user_store.isAuthenticated && to.name === `sign-in`) {
     return next({ name: `home` })
   }
@@ -199,7 +198,6 @@ router.beforeEach(async (to, from, next) => {
   next()
 
 })
-
 
 router.afterEach(() => {
 

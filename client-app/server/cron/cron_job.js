@@ -4,9 +4,9 @@ const { syncEvents, cleanupExpiredEvents } = require('../jobs/syncEvents')
 
 const syncOdds = require("../jobs/syncOdds");
 
-//  (async () => { 
-//    await syncOdds();
-//  })()
+ (async () => { 
+   await cleanupExpiredEvents();
+ })()
 
 
 

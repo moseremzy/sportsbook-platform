@@ -359,7 +359,7 @@ static async submit_deposit(req, res) {
 
     data.currency = req.user.currency
 
-    data.proof_url = req.file.filename;
+    data.proof_url = `/resources/proofs/${req.file.filename}`
 
     data.type = 'deposit'
 
@@ -391,6 +391,8 @@ static async submit_deposit(req, res) {
       }); 
   
   } catch (error) {
+
+    console.log(error.message)
 
     return res.status(500).json({
       success: false,
@@ -1064,13 +1066,12 @@ static async fetch_bet_history(req, res) {
 
 
 
-
 //fetch countries
 static async fetch_countries (req, res) {
  
   try {
 
-    const countries_query = `SELECT * FROM countries`;
+    const countries_query = `SELECT * FROM countries WHERE status = 'enabled'`;
   
     let all_countries = await new Promise( (resolve, reject) => {
 
@@ -1106,7 +1107,6 @@ static async fetch_countries (req, res) {
   }
 
 }
-
 
 
 //fetch sports
@@ -1157,7 +1157,7 @@ static async fetch_leagues (req, res) {
  
   try {
 
-    const leagues_query = `SELECT * FROM leagues`;
+    const leagues_query = `SELECT * FROM leagues WHERE status = 'enabled'`;
   
     let all_leagues = await new Promise( (resolve, reject) => {
 
@@ -1239,13 +1239,13 @@ static async fetch_events(req, res) {
       esp.away_score    AS period_away
   
     FROM events e
-  
-    JOIN sports  sp ON sp.id = e.sport_id
-    JOIN leagues l  ON l.id  = e.league_id
-    LEFT JOIN countries c ON c.id = l.country_id
-  
-    JOIN teams ht ON ht.id = e.home_team_id
-    JOIN teams at ON at.id = e.away_team_id
+
+      JOIN sports  sp ON sp.id = e.sport_id
+      JOIN leagues l  ON l.id  = e.league_id AND l.status = 'enabled'
+      LEFT JOIN countries c ON c.id = l.country_id AND c.status = 'enabled'
+      
+      JOIN teams ht ON ht.id = e.home_team_id
+      JOIN teams at ON at.id = e.away_team_id
   
     LEFT JOIN markets m ON m.slug = 'Winner'
     LEFT JOIN event_markets ml_em

@@ -202,7 +202,7 @@ const coins = ref([
     ticker: 'BTC',
     symbol: btcImg,
     network: 'Bitcoin Network',
-    address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+    address: settings_store.settings.btc,
   },
   {
     id: 'eth',
@@ -210,7 +210,7 @@ const coins = ref([
     ticker: 'ETH',
     symbol: ethImg,
     network: 'ERC-20',
-    address: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+    address: settings_store.settings.eth,
   },
   {
     id: 'usdt',
@@ -218,7 +218,7 @@ const coins = ref([
     ticker: 'USDT',
     symbol: tethImg,
     network: 'TRC-20',
-    address: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',
+    address: settings_store.settings.usdt,
   },
 ])
 
@@ -289,7 +289,7 @@ const submitDeposit = async () => {
 
   formData.append("amount", amount.value);
   formData.append("payment_method", selected.value);
-  formData.append("d_proof", uploadedFile.value);
+  formData.append("proof_image", uploadedFile.value);
 
   try {
 
@@ -299,7 +299,7 @@ const submitDeposit = async () => {
 
     interactive_store.display_success_alert_box()
 
-    window.location.replace('/') // to transaction history page
+    window.location.replace('/account/transactions') // to transaction history page
   
   } catch (err) {
     

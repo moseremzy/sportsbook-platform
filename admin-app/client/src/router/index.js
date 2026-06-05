@@ -2,6 +2,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import { useInteractiveStore } from '@/stores/interactive'
+import { useSettingStore } from '@/stores/settings'
 import { useAdminStore } from "@/stores/admin";
 
 const router = createRouter({
@@ -18,7 +19,7 @@ routes: [
     name: "register",
     component: () => import("../views/Register.vue"),
     meta: {
-      title: "Create an Account - Tech By Cas Admin"
+      title: "Create an Account"
     }
   },
   {
@@ -26,7 +27,7 @@ routes: [
     name: "login",
     component: () => import("../views/Login.vue"),
     meta: {
-      title: "Login - Tech By Cas Admin"
+      title: "Login"
     }
   },
 
@@ -36,17 +37,7 @@ routes: [
     name: 'dashboard',
     component: () => import('../views/Dashboard.vue'),
     meta: {
-      title: 'Dashboard - Tech By Cas Admin',
-      requiresAuth: true,
-      authorize_roles: ['super_admin', 'editor']
-    }
-  },
-  {
-    path: '/account/items',
-    name: 'items',
-    component: () => import('../views/Items.vue'),
-    meta: {
-      title: 'Menus - Tech By Cas Admin',
+      title: 'Dashboard',
       requiresAuth: true,
       authorize_roles: ['super_admin', 'editor']
     }
@@ -56,7 +47,7 @@ routes: [
     name: 'Add-Country',
     component: () => import('../views/Add-Country.vue'),
     meta: {
-      title: 'Add Country - Tech By Cas Admin',
+      title: 'Add Country',
       requiresAuth: true,
       authorize_roles: ['super_admin', 'editor']
     }
@@ -66,7 +57,7 @@ routes: [
     name: 'countries',
     component: () => import('../views/Countries.vue'),
     meta: {
-      title: 'Countries - Tech By Cas Admin',
+      title: 'Countries',
       requiresAuth: true,
       authorize_roles: ['super_admin']
     }
@@ -76,7 +67,7 @@ routes: [
     name: 'editcountry',
     component: () => import('../views/Edit-Country.vue'),
     meta: {
-      title: 'Edit Country - Tech By Cas Admin',
+      title: 'Edit Country',
       requiresAuth: true,
       authorize_roles: ['super_admin']
     }
@@ -86,7 +77,7 @@ routes: [
     name: 'Add-League',
     component: () => import('../views/Add-League.vue'),
     meta: {
-      title: 'Add League - Tech By Cas Admin',
+      title: 'Add League',
       requiresAuth: true,
       authorize_roles: ['super_admin', 'editor']
     }
@@ -96,27 +87,87 @@ routes: [
     name: 'leagues',
     component: () => import('../views/Leagues.vue'),
     meta: {
-      title: 'Leagues - Tech By Cas Admin',
+      title: 'Leagues',
       requiresAuth: true,
       authorize_roles: ['super_admin']
     }
   },
   {
-    path: '/account/device-records',
-    name: 'deviceRecords',
-    component: () => import('../views/Device-Records.vue'),
+    path: '/account/edit-league/:id',
+    name: 'editleague',
+    component: () => import('../views/Edit-League.vue'),
     meta: {
-      title: 'Device-Records - Tech By Cas Admin',
+      title: 'Edit League',
       requiresAuth: true,
       authorize_roles: ['super_admin']
     }
   },
   {
-    path: '/account/staff-management',
-    name: 'Staff-Management',
-    component: () => import('../views/Staff-Management.vue'),
+    path: '/account/add-event',
+    name: 'Add-Event',
+    component: () => import('../views/Add-Event.vue'),
     meta: {
-      title: 'Staff-Management - Tech By Cas Admin',
+      title: 'Add Event',
+      requiresAuth: true,
+      authorize_roles: ['super_admin', 'editor']
+    }
+  },
+  {
+    path: '/account/event-detail/:id',
+    name: '',
+    component: () => import('../views/Event-Detail.vue'),
+    meta: {
+      title: 'Event Detail',
+      requiresAuth: true,
+      authorize_roles: ['super_admin', 'editor']
+    }
+  },
+  {
+    path: '/account/events',
+    name: '',
+    component: () => import('../views/Events.vue'),
+    meta: {
+      title: 'Events',
+      requiresAuth: true,
+      authorize_roles: ['super_admin', 'editor']
+    }
+  },
+  {
+    path: '/account/bets',
+    name: '',
+    component: () => import('../views/Bets.vue'),
+    meta: {
+      title: 'Bets',
+      requiresAuth: true,
+      authorize_roles: ['super_admin', 'editor']
+    }
+  },
+  {
+    path: '/account/bet-detail/:id',
+    name: '',
+    component: () => import('../views/Bet-Detail.vue'),
+    meta: {
+      title: 'Bet Detail',
+      requiresAuth: true,
+      authorize_roles: ['super_admin', 'editor']
+    }
+  },
+  {
+    path: '/account/users',
+    name: 'users',
+    component: () => import('../views/Users.vue'),
+    meta: {
+      title: 'Users',
+      requiresAuth: true,
+      authorize_roles: ['super_admin']
+    }
+  },
+  {
+    path: '/account/transactions',
+    name: 'transactions',
+    component: () => import('../views/Transactions.vue'),
+    meta: {
+      title: 'Transactions',
       requiresAuth: true,
       authorize_roles: ['super_admin']
     }
@@ -126,19 +177,9 @@ routes: [
     name: 'Settings',
     component: () => import('../views/Settings.vue'),
     meta: {
-      title: 'Settings - Tech By Cas Admin',
+      title: 'Settings',
       requiresAuth: true,
       authorize_roles: ['super_admin', 'editor']
-    }
-  },
-  {
-    path: '/account/view-order/:order_id',
-    name: 'viewOrder',
-    component: () => import('../views/View-Order.vue'),
-    meta: {
-      title: 'View Order - Tech By Cas Admin',
-      requiresAuth: true,
-      authorize_roles: ['super_admin']
     }
   }
 ],
@@ -160,13 +201,22 @@ scrollBehavior(to, from, savedPosition) {
 router.beforeEach(async (to, from, next) => {
 
   const admin_store = useAdminStore();
-
-  document.title = to.meta.title || 'Tech By Cas Admin | Admin Panel.';
+  const settings_store    = useSettingStore()
 
   // Ensure admin data loaded
-  if (!admin_store.isFetched) {
-    await admin_store.fetch_admin().catch(() => {});
+   // ── Wait for both user and settings if not fetched yet ──
+   if (!admin_store.isFetched) {
+    await Promise.all([
+      admin_store.fetch_admin().catch(() => {}),
+      settings_store.fetch_settings().catch(() => {})
+    ])
   }
+
+  const site = settings_store.settings?.website || ''
+
+  document.title = to.meta.title
+    ? `${to.meta.title} - ${site}`
+    : `${site} | Betting Company.`
 
   // Route requires login but user not logged in
   if (to.meta.requiresAuth && !admin_store.isAuthenticated) {

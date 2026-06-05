@@ -8,18 +8,14 @@ const req = require("express/lib/request");
 const LIMITERS = require("../middlewares/limiters")
 const sessionConfig = require("../middlewares/session");
 const session = require("express-session");
-
+const path = require('path');
+const fs = require('fs')
 
 
 router.use(session(sessionConfig));
 
 //initialize multer
-const path = require('path');
-
-// This resolves to the root-level resources folder
-// from admin-app/server → go up 2 levels → root → resources
-// from client-app/server → go up 2 levels → root → resources
-const RESOURCES_ROOT = path.resolve(__dirname, '../../resources');
+const RESOURCES_ROOT = path.resolve(__dirname, '../../../resources');
 
 let storage = multer.diskStorage({
 
@@ -27,19 +23,19 @@ let storage = multer.diskStorage({
 
     let folder = ''; // default subfolder
 
-    if (file.fieldname === "countryImage") {
+    if (file.fieldname === "country_image") {
 
       folder = "countries";
 
-    } else if (file.fieldname === "authorsImage") {
+    } else if (file.fieldname === "league_image") {
 
-      folder = "authors";
+      folder = "leagues";
     
     } else if (file.fieldname === "transactionsImage") {
      
       folder = "transactions";
     
-    } else if (file.fieldname === "d_proof") {
+    } else if (file.fieldname === "proof_image") {
       
       folder = "proofs";
     
@@ -60,27 +56,19 @@ let storage = multer.diskStorage({
 
 });
 
+  
   //check file type and mimetype
   let checkFileTypes = function (file, cb) {
-  
-    let fileExt = file.originalname.split(".")[file.originalname.split(".").length - 1]
-    
-    let fileTypes = ["jpg", "jpeg", "png"]
-  
-    let mimeTypes = ["image/jpeg", "image/jpeg", "image/png"]
+    let fileExt = file.originalname.split(".").pop().toLowerCase()
+    let fileTypes = ["jpg", "jpeg", "png", "webp"]
+    let mimeTypes = ["image/jpeg", "image/webp", "image/png"]
+
   
     if (mimeTypes.includes(file.mimetype) && fileTypes.includes(fileExt)) {
-  
       return cb(null, true)
-      
     } else {
-  
-     req.fileValidationError = "You can only upload images"
-  
-     return cb(null, false, req.fileValidationError)
-  
+      return cb(null, false)
     }
-  
   }
    
   let upload = multer({
@@ -127,7 +115,7 @@ router.post("/register", LIMITERS.register(), API.register)
 
 router.post("/login", LIMITERS.login(), API.login)
 
-router.post("/submit_deposit", check_user_session, upload.single("d_proof"), API.submit_deposit);
+router.post("/submit_deposit", check_user_session, upload.single("proof_image"), API.submit_deposit);
 
 router.post("/submit_withdrawal", check_user_session, API.submit_withdrawal);
 

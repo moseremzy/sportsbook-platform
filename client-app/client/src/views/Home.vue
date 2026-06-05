@@ -7,23 +7,23 @@
     <section class="top-leagues desktop-only">
       <div class="section-header">
         <span class="section-title">TOP LEAGUES</span>
-        <a href="#" class="section-link">All</a>
+        <router-link to="/events?match_mode=pending" class="section-link">All</router-link>
       </div>
       <div class="auto-scroll-track" ref="leaguesTrack">
         <div class="auto-scroll-inner">
-          <div
+          <router-link to = "/events?match_mode=pending"
             v-for="(league, i) in leagues"
             :key="i"
             class="league-card"
           >
             <div class="league-icon">
-              <img :src="league.img" :alt="league.name" />
+              <img :src="`http://localhost:9000${league.img}`" :alt="league.name" />
             </div>
             <div class="league-label">
               <span class="league-sport">{{ league.sport }}</span>
               <span class="league-name">{{ league.name }}</span>
             </div>
-          </div>
+          </router-link>
         </div>
       </div>
     </section>
@@ -43,7 +43,7 @@
         <div class="tab-scroll-wrap">
           <router-link to = "/events" class="tab-chips auto-scroll-inner" :style="scrollStyle('sports')">
               <div v-for="(s, i) in matchSportsLoop" :key="i" class="chip">
-                <img :src="s.img" class="chip-icon" :alt="s.name" />
+                <img :src="`http://localhost:9000${s.img}`" class="chip-icon" :alt="s.name" />
                 {{ s.name }}
               </div>
           </router-link>
@@ -97,9 +97,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import eplImg from '../assets/static_images/LEAGUES/EPL.png'
 
-import footbImg from '../assets/static_images/SPORTS/football.svg'
 
 import basebCard from '../assets/static_images/SPORTS/baseball.jpg'
 import basketbCard from '../assets/static_images/SPORTS/basketball.jpg'
@@ -124,7 +122,7 @@ const leagues = computed(() => {
       id: league.id,
       name: league.name,
       slug: league.slug,
-      img: eplImg, //league.logo,
+      img: league.logo, //league.logo,
       sport: sport?.name || "Unknown"
     }
 
@@ -138,7 +136,7 @@ const matchSports = computed(() => {
     return sports_store.sports?.map((s) => {
     return {
            name: s.name,
-           img: footbImg
+           img: s.img
          }
     })
 
@@ -322,6 +320,7 @@ onUnmounted(() => intervals.forEach(clearInterval))
 }
 
 .league-card {
+  text-decoration: none;
   display: flex;
   flex-direction: column;
   margin: 0 0 0 10px;

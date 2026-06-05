@@ -165,13 +165,14 @@ async function syncEvents() {
   try {
 
     const leagues_query = `
-      SELECT 
-        l.*,
-        s.slug AS sport_slug
-      FROM leagues l
-      JOIN sports s ON l.sport_id = s.id
-      WHERE l.status = 1
-    `;
+    SELECT 
+      l.*,
+      s.slug AS sport_slug
+    FROM leagues l
+    JOIN sports s ON l.sport_id = s.id
+    WHERE l.status = 'enabled'
+    AND l.is_seeded = 1
+  `;
 
     const leagues = await query(leagues_query);
 
@@ -197,6 +198,7 @@ async function syncEvents() {
           `SELECT id FROM events
           WHERE league_id = ?
           AND   status IN ('pending', 'live')
+          AND   external_id IS NOT NULL
           AND   external_id NOT IN (${placeholders})`,
           [league.id, ...freshExternalIds]
         );
@@ -214,7 +216,9 @@ async function syncEvents() {
         // API returned nothing — expire everything in this league
         await query(
           `UPDATE events SET status = 'expired', updated_at = NOW()
-          WHERE league_id = ? AND status IN ('pending', 'live')`,
+          WHERE league_id = ? 
+          AND status IN ('pending', 'live')
+          AND external_id IS NOT NULL`,
           [league.id]
         );
         console.log(`No fresh events for league ${league.id}, marked all as expired`);
@@ -272,7 +276,7 @@ async function cleanupExpiredEvents() {
         SELECT id FROM events
         WHERE status = 'expired'
         AND updated_at < NOW() - INTERVAL 7 DAY
-        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE result = 'pending')
+        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE status = 'pending')
       )`
     );
 
@@ -283,7 +287,7 @@ async function cleanupExpiredEvents() {
         SELECT id FROM events
         WHERE status = 'expired'
         AND updated_at < NOW() - INTERVAL 7 DAY
-        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE result = 'pending')
+        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE status = 'pending')
       )`
     );
 
@@ -292,7 +296,7 @@ async function cleanupExpiredEvents() {
         SELECT id FROM events
         WHERE status = 'expired'
         AND updated_at < NOW() - INTERVAL 7 DAY
-        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE result = 'pending')
+        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE status = 'pending')
       )`
     );
 
@@ -301,7 +305,7 @@ async function cleanupExpiredEvents() {
         SELECT id FROM events
         WHERE status = 'expired'
         AND updated_at < NOW() - INTERVAL 7 DAY
-        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE result = 'pending')
+        AND id NOT IN (SELECT DISTINCT event_id FROM bet_selections WHERE status = 'pending')
       )`
     );
 
@@ -310,7 +314,7 @@ async function cleanupExpiredEvents() {
        WHERE status = 'expired'
        AND updated_at < NOW() - INTERVAL 7 DAY
        AND id NOT IN (
-        SELECT DISTINCT event_id FROM bet_selections WHERE result = 'pending'
+        SELECT DISTINCT event_id FROM bet_selections WHERE status = 'pending'
        )`
     );
 

@@ -307,6 +307,8 @@ static async add_country(req, res) {
 }
 
 
+
+//add league
 static async add_league(req, res) {
 
   try {
@@ -373,113 +375,182 @@ static async add_league(req, res) {
 }
 
 
-
-// Resend Confirmation Email
-static async ResendConfirmationMail (req, res) {
-
-  const confirmationEmail = req.body.confirmationEmail //i dey use d email too just incase user wan verify through register or login page. since confirmation code no dey available for those pages
-
+// create event
+static async create_event(req, res) {
+  
   try {
 
-    const admin_query = `SELECT * FROM admin WHERE email= ?`
+    const { sport_id, league_id, home_team, away_team, start_time, external_id } = req.body
 
-    const admin = await new Promise( (resolve, reject) => {
+    if (!sport_id)    return res.status(400).json({ success: false, message: 'Sport is required' })
+    if (!league_id)   return res.status(400).json({ success: false, message: 'League is required' })
+    if (!home_team)   return res.status(400).json({ success: false, message: 'Home team is required' })
+    if (!away_team)   return res.status(400).json({ success: false, message: 'Away team is required' })
+    if (!start_time)  return res.status(400).json({ success: false, message: 'Start time is required' })
 
-      db.query(admin_query, [confirmationEmail], (err, result) => {
-
-        if (err) {
-
-          reject(err)
-        
-        } else {
-
-          resolve(result)
-
-        }
-
-      })
-
-    })
-   
-   if (admin.length > 0) { //if the admin dey
-     
-      return await MAILS.SendConfirmationMail(req, res, admin[0].email, admin[0].confirmation_code)
-
-    } else { //if e no dey
-
-      return res.status(401).json({
-        success: false,
-        message: "Invalid Request",
-      });
-
+    if (home_team.trim().toLowerCase() === away_team.trim().toLowerCase()) {
+      return res.status(400).json({ success: false, message: 'Home and away teams cannot be the same' })
     }
 
-  } catch (err) {
+
+    //  find or create team ──────────────────────────
+      async function findOrCreateTeam(db, name, sport_id) {
+      
+      const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
     
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred. Please try again.",
-    });    
+      const existing = await HELPERS.query(db,
+        'SELECT id FROM teams WHERE name = ? AND sport_id = ?',
+        [name.trim(), sport_id]
+      )
+    
+      if (existing.length > 0) return existing[0].id
+    
+      const result = await HELPERS.query(db,
+        'INSERT INTO teams (name, slug, sport_id) VALUES (?, ?, ?)',
+        [name.trim(), slug, sport_id]
+      )
+    
+      return result.insertId
+    }
 
-  } 
 
-}
+    // ── Find or create both teams ────────────────────────
+    const home_team_id = await findOrCreateTeam(db, home_team, sport_id)
+    const away_team_id = await findOrCreateTeam(db, away_team, sport_id)
 
-
-
-//upload item
-static async upload_items(req, res) {
-
-  const data = req.body;
-
-  data.name = data.name.trim();
-
-  // TEMP slug without id for now
-  data.slug = HELPERS.slugify(data.name);
-
-  data.main_image = req.files.image ? req.files.image[0].path : null;
-  
-  data.main_video = req.files.video ? req.files.video[0].path : null;
-
-  try {
-    // 1️⃣ Insert product first
-    const result = await new Promise((resolve, reject) => {
-      const query = "INSERT INTO products SET ?";
-      db.query(query, data, (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    const insertedId = result.insertId;
-
-    // 2️⃣ Generate final slug with id
-    const finalSlug = `${HELPERS.slugify(data.name)}-${insertedId}`;
-
-    // 3️⃣ Update the row with final slug
-    await new Promise((resolve, reject) => {
-      const query = "UPDATE products SET slug = ? WHERE product_id = ?";
-      db.query(query, [finalSlug, insertedId], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
+    // ── Insert event ─────────────────────────────────────
+    const result = await HELPERS.query(db,
+      `INSERT INTO events (sport_id, league_id, home_team_id, away_team_id, start_time, external_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [sport_id, league_id, home_team_id, away_team_id, start_time, external_id || null]
+    )
 
     return res.status(200).json({
       success: true,
-      message: "success",
-    });
+      message: 'Event created successfully',
+      event_id: result.insertId
+    })
 
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred. Please try again.",
-    });
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
   }
 }
 
 
+//add event market
+static async add_event_market(req, res) {
+  
+  try {
+    
+    const { event_id, market_id } = req.body
 
+    if (!event_id)  return res.status(400).json({ success: false, message: 'Event id is required' })
+    if (!market_id) return res.status(400).json({ success: false, message: 'Market is required' })
+
+    // ── Check duplicate ──────────────────────────────────
+    const existing = await HELPERS.query(db,
+      'SELECT id FROM event_markets WHERE event_id = ? AND market_id = ?',
+      [event_id, market_id]
+    )
+
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Market already added to this event' })
+    }
+
+    const result = await HELPERS.query(db,
+      'INSERT INTO event_markets (event_id, market_id) VALUES (?, ?)',
+      [event_id, market_id]
+    )
+
+    // ── Return the new event_market with market name ─────
+    const newMarket = await HELPERS.query(db,
+      `SELECT em.id AS event_market_id, em.status AS market_status,
+              m.id AS market_id, m.name AS market_name, m.slug AS market_slug
+       FROM event_markets em
+       JOIN markets m ON m.id = em.market_id
+       WHERE em.id = ?`,
+      [result.insertId]
+    )
+
+    return res.status(200).json({
+      success: true,
+      message: 'Market added successfully',
+      market: { ...newMarket[0], selections: [] }
+    })
+
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
+
+
+//add selection
+static async add_selection(req, res) {
+
+  try {
+    
+    const { event_market_id, name, odd, line_value } = req.body
+
+    if (!event_market_id) return res.status(400).json({ success: false, message: 'Event market id is required' })
+    if (!name)            return res.status(400).json({ success: false, message: 'Selection name is required' })
+    if (!odd)             return res.status(400).json({ success: false, message: 'Odd is required' })
+
+    const result = await HELPERS.query(db,
+      'INSERT INTO selections (event_market_id, name, odd, line_value) VALUES (?, ?, ?, ?)',
+      [event_market_id, name.trim(), parseFloat(odd), line_value ? parseFloat(line_value) : null]
+    )
+
+    return res.status(200).json({
+      success: true,
+      message: 'Selection added successfully',
+      selection: {
+        id: result.insertId,
+        name: name.trim(),
+        odd: parseFloat(odd),
+        line_value: line_value ? parseFloat(line_value) : null,
+        status: 'open'
+      }
+    })
+
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
+
+
+// Update Events Period
+static async upsert_event_period(req, res) {
+
+  try {
+    
+    const { event_id, period, home_score, away_score } = req.body
+
+    if (!event_id) return res.status(400).json({ success: false, message: 'Event id is required' })
+    if (!period)   return res.status(400).json({ success: false, message: 'Period is required' })
+ 
+    await HELPERS.query(db,
+      `INSERT INTO event_score_periods (event_id, period, home_score, away_score)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE home_score = VALUES(home_score), away_score = VALUES(away_score)`,
+      [event_id, period, home_score ?? 0, away_score ?? 0]
+    )
+ 
+    // ── Return updated periods for this event ────────────
+    const periods = await HELPERS.query(db,
+      `SELECT id, period, home_score, away_score FROM event_score_periods WHERE event_id = ? ORDER BY id ASC`,
+      [event_id]
+    )
+ 
+    return res.status(200).json({ success: true, message: 'Period score saved successfully', periods })
+ 
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+
+}
 
 
 //send reset password email to user
@@ -645,1400 +716,6 @@ static async reset_password (req, res) {
 
 
 
-
-//cancel order
-static async cancel_order (req, res) {
-
-  let { description, order_id, user_id } = req.body;
-
-  let status_query;
-
-  let status_value;
-
-  try {
-
-    const user_query = `SELECT * FROM users WHERE user_id= ?` //first of all find the user
-
-    const user = await new Promise( (resolve, reject) => {
-  
-      db.query(user_query, [user_id], (err, result) => {
-  
-        if (err) {
-  
-          reject(err)
-        
-        } else {
-  
-          resolve(result)
-  
-        }
-  
-      })
-  
-    })
-
-    if (!user[0]) { //if this user doesnt exist
-      
-      return res.status(401).json({
-        success: false,
-        message: "User was not found",
-      });  
-
-    }
-
-    const order_query = `SELECT * FROM orders WHERE order_id= ? 
-    AND payment_method= ? 
-    AND payment_status= ? 
-    AND refund_status!= ?` //first of all find the user
-
-    const order = await new Promise( (resolve, reject) => {
-  
-      db.query(order_query, [order_id, 'online payment', 'success', 'refunded'], (err, result) => {
-  
-        if (err) {
-  
-          reject(err)
-        
-        } else {
-  
-          resolve(result)
-  
-        }
-  
-      })
-  
-    }) //Now find the order mainly to extract he reference
-
-
-    if (order[0]) { //if the order dey and na online payment, payment status na success and dem neva refund before
-
-     await HELPERS.refundPayment(order[0].payment_reference)
-      
-     status_query = `UPDATE orders 
-      SET order_status= ?,
-      description= ?,
-      refund_status= ?
-      WHERE order_id= ?`
-
-     status_value = ['cancelled', description, 'pending', order_id]
-     
-    } else {
-
-     status_query = `UPDATE orders 
-      SET order_status= ?,
-      description= ?
-      WHERE order_id= ?`
-
-     status_value = ['cancelled', description, order_id]
-
-    }
-
-      await new Promise( (resolve, reject) => { //update order
-
-        db.query(status_query, status_value, (err, result) => {
-
-          if (err) {
-
-            reject(err)
-          
-          } else {
-
-            resolve(result)
-
-          }
-
-        })
-
-    })
-
-    
-    await MAILS.send_user_cancellation_email(req, res, user[0].email, user[0].fullname, order_id, description)
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-    
-  }
-
-}
-
-
-
-//confirm order
-static async confirm_order (req, res) {
-
-  const { delivery_date, description, order_id, user_id } = req.body
-
-  try {
-
-    const user_query = `SELECT * FROM users WHERE user_id= ?` //first of all find the user
-
-    const user = await new Promise( (resolve, reject) => {
-  
-      db.query(user_query, [user_id], (err, result) => {
-  
-        if (err) {
-  
-          reject(err)
-        
-        } else {
-  
-          resolve(result)
-  
-        }
-  
-      })
-  
-    })
-
-    if (!user[0]) { //if this user doesnt exist
-      
-      return res.status(401).json({
-        success: false,
-        message: "User was not found",
-      });  
-
-    }
-
-    //Get Order Items
-    const order_items_query = `SELECT * FROM order_items WHERE order_id= ?` //first of all find the user
-
-    const order_items = await new Promise( (resolve, reject) => {
-  
-      db.query(order_items_query, [order_id], (err, result) => {
-  
-        if (err) {
-  
-          reject(err)
-        
-        } else {
-  
-          resolve(result)
-  
-        }
-  
-      })
-  
-    })
-
-
-    async function DerivedProducts() {
-
-    for (const item of order_items) {
-        
-      const product_query = `SELECT * FROM products WHERE product_id= ?`
-    
-        const product = await new Promise( (resolve, reject) => {
-      
-          db.query(product_query, [item.product_id], (err, result) => {
-      
-            if (err) {
-      
-              reject(err)
-            
-            } else {
-      
-              resolve(result)
-      
-            }
-      
-          })
-      
-        })
-    
-        if (product[0]) { //if you find am for db
-    
-          order_items.forEach((item) => { //update the stock quantity of products array for each object
-             
-            item.product_id == product[0].product_id ? item.stock_quantity = product[0].stock_quantity : null
-
-            item.product_id == product[0].product_id ? item.name = product[0].name : null
-
-          })
-    
-        }
-
-    }
-
-    return order_items
-
-  }
-
-  let stockError = HELPERS.stock_availability(await DerivedProducts());
-
-    if (stockError) {
-      return res.status(400).json({
-        success: false,
-        message: stockError
-      });
-    }
-
-
-    //Update Stock Quanntity
-    for (const item  of order_items) { 
-
-      const item_quantity = item.quantity
-      
-      const product_id = item.product_id
-
-      const products_query = `
-        UPDATE products
-        SET stock_quantity = stock_quantity - ?
-        WHERE product_id = ?
-          AND stock_quantity >= ?
-      `
-      await new Promise((resolve, reject) => {
-        
-        db.query(products_query, [item_quantity, product_id, item_quantity],
-          
-          (err, result) => {
-          
-            if (err) reject(err)
-          
-            else resolve(result)
-          
-          })
-
-      })
-    
-    }
-
-
-   //Update Order Status
-   const status_query = `UPDATE orders 
-      SET order_status= ?,
-      delivery_date = ?,
-      description= ?
-      WHERE order_id= ?`
-
-      await new Promise( (resolve, reject) => { //update user password token
-
-        db.query(status_query, ['confirmed', delivery_date, description, order_id], (err, result) => {
-
-          if (err) {
-
-            reject(err)
-          
-          } else {
-
-            resolve(result)
-
-          }
-
-        })
-
-      })
-
-    return res.status(200).json({
-      success: true,
-      message: "success",
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "An error occured. please try again",
-    });
-    
-  }
-
-}
-
-
-
-//retry refund for this user order
-static async retry_refund (req, res) {
-
-  let { order_id } = req.body;
-
-  try {
-
-    const order_query = `SELECT * FROM orders WHERE order_id= ?` //first of all find the user
-
-    const order = await new Promise( (resolve, reject) => {
-  
-      db.query(order_query, [order_id], (err, result) => {
-  
-        if (err) {
-  
-          reject(err)
-        
-        } else {
-  
-          resolve(result)
-  
-        }
-  
-      })
-  
-    })
-
-    if (!order[0]) { //if this order doesnt exist
-      
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });  
-
-    }
-
-    if (order[0].payment_status !== 'success') {
-      return res.status(400).json({
-        success: false,
-        message: "Order is not paid"
-      });
-    }
-    
-    if (['pending', 'refunded'].includes(order[0].refund_status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Refund already initiated"
-      });
-    }
-    
-    const refund = await HELPERS.refundPayment(order[0].payment_reference);
-
-    //Update Order Status
-    const status_query = `UPDATE orders 
-    SET refund_status= ?
-    WHERE order_id= ?`
-
-    await new Promise( (resolve, reject) => { //update user password token
-
-      db.query(status_query, ['pending', order_id], (err, result) => {
-
-        if (err) {
-
-          reject(err)
-        
-        } else {
-
-          resolve(result)
-
-        }
-
-      })
-
-    })
-
-    return res.status(200).json({
-      success: true,
-      message: "Refund retry initiated"
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
-    
-  }
-
-}
-
-
-// submits records before updating order status to delivered
-static async submit_gadget_record(req, res) {
-
-  try {
-
-    const data = req.body
-    const order_id = data.order_id
-
-    const gadgets = data.gadgets.map((gadget) => {
-      return {
-        order_item_id: gadget.order_item_id,
-        imei: gadget.imei,
-        source: gadget.source
-      }
-    })
-
-    // check if records already exist
-    const existing = await new Promise((resolve, reject) => {
-
-      const query = `
-        SELECT dr.record_id 
-        FROM device_records dr
-        JOIN order_items oi ON dr.order_item_id = oi.order_item_id
-        WHERE oi.order_id = ?
-        LIMIT 1
-      `
-
-      db.query(query, [order_id], (err, result) => {
-        if (err) reject(err)
-        else resolve(result)
-      })
-
-    })
-
-    const recordsAlreadyExist = existing.length > 0
-
-
-    // 1️⃣ START TRANSACTION
-    await new Promise((resolve, reject) => {
-      db.query("START TRANSACTION", (err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-
-
-    // 2️⃣ INSERT GADGETS ONLY IF THEY DON'T EXIST
-    if (!recordsAlreadyExist) {
-
-      for (const gadget of gadgets) {
-
-        await new Promise((resolve, reject) => {
-
-          const query = `
-            INSERT INTO device_records 
-            (order_item_id, imei, source) 
-            VALUES (?, ?, ?)
-          `
-
-          db.query(
-            query,
-            [gadget.order_item_id, gadget.imei, gadget.source],
-            (err, result) => {
-              if (err) reject(err)
-              else resolve(result)
-            }
-          )
-
-        })
-
-      }
-
-    }
-
-
-    // 3️⃣ UPDATE ORDER STATUS
-    await new Promise((resolve, reject) => {
-
-      const query = `
-        UPDATE orders 
-        SET order_status = 'delivered' 
-        WHERE order_id = ?
-      `
-
-      db.query(query, [order_id], (err, result) => {
-        if (err) reject(err)
-        else resolve(result)
-      })
-
-    })
-
-
-    // 4️⃣ COMMIT
-    await new Promise((resolve, reject) => {
-      db.query("COMMIT", (err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-
-
-    return res.status(200).json({
-      success: true,
-      message: recordsAlreadyExist
-        ? "Order status updated to delivered (records already existed)"
-        : "Order delivered and gadget records stored"
-    })
-
-
-  } catch (error) {
-
-    await new Promise((resolve) => {
-      db.query("ROLLBACK", () => resolve())
-    })
-
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    })
-
-  }
-
-}
-
-
-
-// Adjust Prices
-static async adjust_prices(req, res) {
-
-  try {
-
-    const { value, category, action, type } = req.body;
-
-
-    // validation
-    if (!value || value <= 0) {
-      return res.json({
-        success: false,
-        message: "Invalid value"
-      });
-    }
-
-
-    if (!action || !["increase", "decrease"].includes(action)) {
-      return res.json({
-        success: false,
-        message: "Invalid action"
-      });
-    }
-
-
-    if (!type || !["percent", "amount"].includes(type)) {
-      return res.json({
-        success: false,
-        message: "Invalid type"
-      });
-    }
-
-
-    let query;
-    let values = [];
-
-
-    // ======================
-    // PERCENT ADJUSTMENT
-    // ======================
-
-    if (type === "percent") {
-
-      let multiplier;
-
-      if (action === "increase") {
-        multiplier = 1 + (value / 100);
-      } 
-      else {
-        multiplier = 1 - (value / 100);
-      }
-
-
-      if (category === "all") {
-
-        query = `
-          UPDATE products
-          SET price = price * ?
-        `;
-
-        values = [multiplier];
-
-      } 
-      else {
-
-        query = `
-          UPDATE products
-          SET price = price * ?
-          WHERE category_id = ?
-        `;
-
-        values = [multiplier, category];
-
-      }
-
-    }
-
-
-    // ======================
-    // AMOUNT ADJUSTMENT
-    // ======================
-
-    if (type === "amount") {
-
-      let operator = action === "increase" ? "+" : "-";
-
-      if (category === "all") {
-
-        query = `
-          UPDATE products
-          SET price = GREATEST(price ${operator} ?, 0)
-        `;
-
-        values = [value];
-
-      } 
-      else {
-
-        query = `
-          UPDATE products
-          SET price = GREATEST(price ${operator} ?, 0) 
-          WHERE category_id = ?
-        `;
-
-        values = [value, category];
-
-      }
-
-    }
-
-
-    const result = await new Promise((resolve, reject) => {
-      db.query(query, values, (err, data) => {
-        if (err) reject(err);
-        else resolve(data);
-      });
-
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Prices updated successfully",
-      affected_rows: result.affectedRows
-    });
-
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
-
-  }
-
-}
-
-
-//CREATE ORDER MANUALLY
- static async create_manual_order (req, res) {
-
-  const data = req.body;
-
-    try {
-
-      data.confirmation_pin = HELPERS.generateConfirmationPin()
-
-      data.payment_reference =  HELPERS.generatePaymentReference()
-
-      async function keep_for_db(data, orderData) { //keep item for db
-
-      const sql = 'INSERT INTO orders SET ?'
-
-      const order_id = await new Promise( (resolve, reject) => { //enter order in orders table
-  
-        db.query(sql, orderData, (err, result) => {
-  
-          if (err) {
-  
-            reject(err)
-          
-          } else {
-  
-            resolve(result.insertId)
-  
-          }
-  
-        })
-  
-      })
-
-      
-      const orderItems = data.products.map(item => [
-          order_id,
-          item.item_name,
-          item.quantity,
-          item.price
-      ]);
-
-
-      const itemsSql = `
-       INSERT INTO order_items (order_id, item_name, quantity, price)
-       VALUES ?
-      `; //enter each item in order items table
-
-      await new Promise( (resolve, reject) => {
-  
-        db.query(itemsSql, [orderItems], (err, result) => {
-  
-          if (err) {
-  
-            reject(err)
-          
-          } else {
-  
-            resolve()
-  
-          }
-  
-        })
-  
-     })
-
-     return order_id
-
-  }
-
-  const orderData = {
-    customer_name: data.customer_name,
-    customer_phone: data.phone,
-    customer_address: data.customer_address,
-    order_status: 'confirmed',
-    order_type: 'walk-in',
-    total_amount: data.total_amount,
-    payment_method: data.payment_method,
-    payment_status: 'success',
-    total_items: data.total_items,
-    delivery_fee: data.delivery_fee,
-    confirmation_pin: data.confirmation_pin,
-    payment_reference: data.payment_reference
-  };
- 
-    let order_id = await keep_for_db(data, orderData)
-
-    return res.status(200).json({
-      success: true,
-      message: "success",
-      order_id: order_id
-    });   
-    
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });  
-    
-  }
-
- }
-
-
- 
-//download reciept
-static async download_reciept(req, res) {
-  
-  try {
-    
-    // const naira = new Intl.NumberFormat("en-NG", {
-    //   style: "currency",
-    //   currency: "NGN",
-    // });
-
-    const order_id = req.body.order_id;
-
-    // 1️⃣ Fetch Order
-    const order = await new Promise((resolve, reject) => {
-      db.query(
-        "SELECT * FROM orders WHERE order_id = ?",
-        [order_id],
-        (err, result) => {
-          if (err) return reject(err);
-          resolve(result[0]);
-        }
-      );
-    });
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    // 2️⃣ Verify payment
-    if (order.payment_status !== "success") {
-      return res.status(400).json({
-        success: false,
-        message: "Payment not verified",
-      });
-    }
-
-
-    const order_items_query = `
-    SELECT 
-      o.order_id,
-      o.order_status,
-      o.created_at,
-      o.note,
-      o.total_amount,
-      o.delivery_fee,
-
-      -- User details
-      u.user_id AS customer_id,
-      COALESCE(u.fullname, o.customer_name) AS customer_name,
-      COALESCE(u.phone, o.customer_phone) AS phone,
-      u.email,
-      COALESCE(u.address, o.customer_address) AS address,
-
-      -- Product details
-      p.product_id,
-      COALESCE(p.name, oi.item_name) AS product_name,
-      p.main_image,
-
-      -- Order item details
-      oi.order_item_id,
-      oi.quantity,
-      oi.price,
-
-      -- Device record
-      dr.imei,
-      dr.source
-
-    FROM orders o
-    LEFT JOIN users u ON o.user_id = u.user_id
-    JOIN order_items oi ON o.order_id = oi.order_id
-    LEFT JOIN products p ON oi.product_id = p.product_id
-    LEFT JOIN device_records dr ON oi.order_item_id = dr.order_item_id
-
-    WHERE o.order_id = ?
-    `;
-
-  
-  let order_items = await new Promise((resolve, reject) => {
-    db.query(order_items_query, [order_id], (err, result) => {
-      if (err) reject(err);
-      else resolve(result);
-    });
-  });
-
-
-  const doc = new PDFDocument({ margin: 40 });
-
-  doc.registerFont("Roboto", path.join(__dirname, "../fonts/Roboto-Regular.ttf"));
-  doc.registerFont("Roboto-Bold", path.join(__dirname, "../fonts/Roboto-Bold.ttf"));
-  doc.registerFont("DancingScript-Regular", path.join(__dirname, "../fonts/DancingScript-Regular.ttf"));
-  
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename=receipt-${order.order_id}.pdf`
-  );
-  
-  doc.pipe(res);
-  
-  const current_order = order_items[0];
-  const items = order_items;
-  
-  const naira = new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-  });
-  
-  // ===============================
-  // HEADER (UNCHANGED)
-  // ===============================
-  const logoPath = path.join(__dirname, "../images/logo.png");
-  const logoWidth = 60;
-  const pageWidth = doc.page.width;
-  const centerX = (pageWidth - logoWidth) / 2;
-  
-  doc.image(logoPath, centerX, 40, { width: logoWidth });
-  
-  doc.moveDown(2.5);
-  
-  doc.font("Roboto-Bold").fontSize(20).text("TECHBYCAS", { align: "center" });
-  doc.fontSize(14).text("GADGET STORE", { align: "center" });
-  
-  doc.moveDown(0.3);
-  
-  doc.font("Roboto").fontSize(9)
-    .text("18 Asemota Street, Edo State, Nigeria", { align: "center" })
-    .text("Phone: 08077416692 | Email: support@techbycas.com", { align: "center" });
-  
-  doc.moveDown();
-  doc.moveTo(40, doc.y).lineTo(560, doc.y).stroke();
-  doc.moveDown(0.5);
-  
-  doc.font("Roboto-Bold").fontSize(14).text("SALES RECEIPT", {
-    align: "center",
-  });
-  
-  doc.moveDown(0.8);
-  
-  // ===============================
-  // HELPER
-  // ===============================
-  function labelValue(label, value, x, y) {
-    doc.font("Roboto-Bold").text(label, x, y, { continued: true });
-    doc.font("Roboto").text(value);
-  }
-  
-  // ===============================
-  // 🔥 FORCE SMALL FONT FOR BOXES
-  // ===============================
-  doc.fontSize(9);
-  
-
-  const startX = 40;
-  const tableWidth = 520;
-  const col1 = 170;
-  const col2 = 170;
-  let y = doc.y;
-
-  // ===============================
-// RECEIPT BOX (FIXED WRAPPING)
-// ===============================
-doc.rect(startX, y, tableWidth, 25).stroke();
-
-doc.moveTo(startX + col1, y).lineTo(startX + col1, y + 25).stroke();
-doc.moveTo(startX + col1 + col2, y).lineTo(startX + col1 + col2, y + 25).stroke();
-
-const cellPadding = 5;
-
-// Receipt
-doc.font("Roboto-Bold").text("Receipt:", startX + cellPadding, y + 5);
-doc.font("Roboto").text(`#${current_order.order_id}`, startX + cellPadding + 60, y + 5, {
-  width: col1 - 70
-});
-
-// Date
-doc.font("Roboto-Bold").text("Date:", startX + col1 + cellPadding, y + 5);
-doc.font("Roboto").text(
-  new Date(current_order.created_at).toLocaleDateString(),
-  startX + col1 + cellPadding + 40,
-  y + 5,
-  { width: col2 - 50 }
-);
-
-// Time
-doc.font("Roboto-Bold").text("Time:", startX + col1 + col2 + cellPadding, y + 5);
-doc.font("Roboto").text(
-  new Date(current_order.created_at).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true
-  }),
-  startX + col1 + col2 + cellPadding + 40,
-  y + 5,
-  { width: col2 - 50 }
-);
-
-y += 30;
-  
-// ===============================
-// CUSTOMER BOX (FIXED WRAPPING)
-// ===============================
-const colWidth = tableWidth / 3;
-const padding = 5;
-
-// calculate dynamic height
-const nameHeight = doc.heightOfString(current_order.customer_name || "-", {
-  width: colWidth - 70
-});
-const phoneHeight = doc.heightOfString(current_order.phone || "-", {
-  width: colWidth - 60
-});
-const addressHeight = doc.heightOfString(current_order.address || "-", {
-  width: colWidth - 70
-});
-
-const customerHeight = Math.max(nameHeight, phoneHeight, addressHeight, 15) + 12;
-
-// box
-doc.rect(startX, y, tableWidth, customerHeight).stroke();
-
-// vertical lines
-doc.moveTo(startX + colWidth, y)
-  .lineTo(startX + colWidth, y + customerHeight)
-  .stroke();
-
-doc.moveTo(startX + colWidth * 2, y)
-  .lineTo(startX + colWidth * 2, y + customerHeight)
-  .stroke();
-
-// NAME
-doc.font("Roboto-Bold").text("Customer:", startX + padding, y + 5);
-doc.font("Roboto").text(
-  current_order.customer_name || "-",
-  startX + padding + 65,
-  y + 5,
-  { width: colWidth - 75 }
-);
-
-// PHONE
-doc.font("Roboto-Bold").text("Phone:", startX + colWidth + padding, y + 5);
-doc.font("Roboto").text(
-  current_order.phone || "-",
-  startX + colWidth + padding + 50,
-  y + 5,
-  { width: colWidth - 60 }
-);
-
-// ADDRESS
-doc.font("Roboto-Bold").text("Address:", startX + colWidth * 2 + padding, y + 5);
-doc.font("Roboto").text(
-  current_order.address || "n/a",
-  startX + colWidth * 2 + padding + 60,
-  y + 5,
-  { width: colWidth - 70 }
-);
-
-y += customerHeight + 10;
-  
-  // ===============================
-  // CONTINUE REST OF YOUR CODE...
-  // (table, totals, signatures remain unchanged)
-  // ===============================
-
-// ===============================
-// TABLE (QTY REMOVED - FULL WIDTH FIXED)
-// ===============================
-const colWidths = [210, 130, 90, 90];
-const headers = ["ITEM", "IMEI / SERIAL", "UNIT PRICE", "AMOUNT"];
-
-doc.rect(startX, y, tableWidth, 25).stroke();
-
-let x = startX;
-colWidths.forEach(width => {
-  doc.moveTo(x, y).lineTo(x, y + 25).stroke();
-  x += width;
-});
-doc.moveTo(startX + tableWidth, y)
-  .lineTo(startX + tableWidth, y + 25)
-  .stroke();
-
-doc.font("Roboto-Bold").fontSize(9);
-
-x = startX;
-headers.forEach((h, i) => {
-  doc.text(h, x + 5, y + 8, { width: colWidths[i] - 10 });
-  x += colWidths[i];
-});
-
-y += 25;
-doc.font("Roboto");
-
-items.forEach(item => {
-
-  const descHeight = doc.heightOfString(item.product_name || item.item_name, {
-    width: colWidths[0] - 10
-  });
-
-  const imeiHeight = doc.heightOfString(item.imei || "-", {
-    width: colWidths[1] - 10
-  });
-
-  const priceHeight = doc.heightOfString(naira.format(item.price), {
-    width: colWidths[2] - 10
-  });
-
-  const amountHeight = doc.heightOfString(
-    naira.format(item.price * item.quantity),
-    { width: colWidths[3] - 10 }
-  );
-
-  const rowHeight = Math.max(
-    descHeight,
-    imeiHeight,
-    priceHeight,
-    amountHeight,
-    20
-  ) + 10;
-
-  doc.rect(startX, y, tableWidth, rowHeight).stroke();
-
-  let x = startX;
-  colWidths.forEach(width => {
-    doc.moveTo(x, y).lineTo(x, y + rowHeight).stroke();
-    x += width;
-  });
-
-  doc.moveTo(startX + tableWidth, y)
-    .lineTo(startX + tableWidth, y + rowHeight)
-    .stroke();
-
-  x = startX;
-
-  doc.text(item.product_name || item.item_name, x + 5, y + 5, {
-    width: colWidths[0] - 10,
-    lineBreak: true
-  });
-  x += colWidths[0];
-
-  doc.text(item.imei || "-", x + 5, y + 5, {
-    width: colWidths[1] - 10,
-    lineBreak: true
-  });
-  x += colWidths[1];
-
-  doc.text(naira.format(item.price), x + 5, y + 5, {
-    width: colWidths[2] - 10,
-    lineBreak: true
-  });
-  x += colWidths[2];
-
-  doc.text(naira.format(item.price * item.quantity), x + 5, y + 5, {
-    width: colWidths[3] - 10,
-    lineBreak: true
-  });
-
-  y += rowHeight;
-});
-
-// ===============================
-// LEFT & RIGHT ROW (PAYMENT + SUMMARY)
-// ===============================
-const leftX = startX;
-const rightX = startX + tableWidth - 200;
-
-let sectionY = y + 20;
-
-// LEFT → Payment Method
-labelValue(
-  "Payment Method: ",
-  order.payment_method || "-",
-  leftX,
-  sectionY
-);
-
-// RIGHT → Order Summary
-
-const subTotal = Number(order.total_amount) - (order.delivery_fee || 0);
-const deliveryFee = Number(order.delivery_fee || 0);
-const finalTotal = Number(order.total_amount);
-const lineGap = 15;
-
-labelValue("SUBTOTAL: ", naira.format(subTotal), rightX, sectionY);
-
-labelValue(
-  "DELIVERY FEE: ",
-  naira.format(deliveryFee),
-  rightX,
-  sectionY + lineGap
-);
-
-labelValue(
-  "TOTAL PAID: ",
-  naira.format(finalTotal),
-  rightX,
-  sectionY + lineGap * 2
-);
-
-// ===============================
-// DIVIDER LINE
-// ===============================
-const dividerY = sectionY + 46;
-
-doc.moveTo(startX, dividerY)
-  .lineTo(startX + tableWidth, dividerY)
-  .stroke();
-
-
-// ===============================
-// TERMS SECTION (LEFT)
-// ===============================
-let termsY = dividerY + 15;
-
-doc.font("Roboto-Bold").text("Terms & Conditions:", leftX, termsY);
-
-doc.font("Roboto").fontSize(9).text(
-  "1. Used/Pre-owned devices carry a 7-day testing warranty.\n" +
-  "2. No refunds after 48 hours; returns for exchange within 7 days for defective hardware.\n" +
-  "3. Warranty does not cover liquid damage, broken screens, or rooting/software modifications.\n" +
-  "4. Sales receipt is required for all warranty claims.",
-  leftX,
-  termsY + 12,
-  { width: 220 }
-);
-
-
-// ===============================
-// SIGNATURES (FINAL CLEAN VERSION)
-// ===============================
-
-// more space from terms
-const signatureY = termsY + 130;
-
-// ---------- CUSTOMER (LEFT) ----------
-const customerLineWidth = 130;
-
-// line
-doc.moveTo(leftX, signatureY)
-  .lineTo(leftX + customerLineWidth, signatureY)
-  .stroke();
-
-// label (closer to line)
-doc.font("Roboto-Bold").fontSize(9).text(
-  "Customer Signature",
-  leftX,
-  signatureY + 3
-);
-
-
-// ---------- MANAGER (RIGHT) ----------
-const managerLineWidth = 120;
-
-// push fully to right
-const managerX = startX + tableWidth - managerLineWidth;
-
-// line
-doc.moveTo(managerX, signatureY)
-  .lineTo(managerX + managerLineWidth, signatureY)
-  .stroke();
-
-// signature text on line (centered nicely)
-doc.font("DancingScript-Regular").fontSize(12).text(
-  "Techbycas",
-  managerX + 20,
-  signatureY - 12
-);
-
-// label (tight under line)
-doc.font("Roboto-Bold").fontSize(9).text(
-  "Manager Signature",
-  managerX,
-  signatureY + 3
-);
-
-// ===============================
-// FOOTER CENTER (FIXED PROPERLY)
-// ===============================
-doc.moveDown(2);
-
-// force full-width centered text
-doc.font("Roboto-Bold")
-.fontSize(12)
-.text("THANK YOU FOR CHOOSING TECHBYCAS!", startX, doc.y, {
-  width: tableWidth,
-  align: "center"
-});
-
-doc.end();
-
-  } catch (error) {
-
-    console.log(error.message)
-
-    return res.status(500).json({
-      success: false,
-      message: "Error generating receipt",
-    });
-  }
-}
-
-
-
-
-  //CHANGE ITEM PHOTO
-  static async update_photo (req, res) {
-
-    let item_id = req.body.item_id
-
-    let current_media_url = req.body.current_media_url
-
-    let current_public_id = HELPERS.getPublicIdFromUrl(current_media_url)
-
-    let main_image = req.files.image ? req.files.image[0].path : null;
-  
-    try {
- 
-      const item_photo_query = `UPDATE products 
-      SET main_image= ?
-      WHERE product_id= ?`
-
-      await new Promise( (resolve, reject) => { //update user password token
-
-        db.query(item_photo_query, [main_image, item_id], (err, result) => {
-
-          if (err) {
-
-            reject(err)
-          
-          } else {
-
-            resolve(result)
-
-          }
-
-        })
-
-      })
-
-   // Delete the old image from Cloudinary if public_id exists
-    if (current_public_id) {
-      
-      await cloudinary.uploader.destroy(current_public_id, { resource_type: "image" });
-    
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "success",
-      main_image: main_image
-    });
-     
-   } catch (error) {
-     
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update product image",
-    }); 
- 
-   }
- 
- }
-
-
-
-  //CHANGE ITEM VIDEO
-  static async update_video (req, res) {
-
-    let item_id = req.body.item_id
-
-    let current_media_url = req.body.current_media_url
-
-    let current_public_id = HELPERS.getPublicIdFromUrl(current_media_url)
-
-    let main_video = req.files.video ? req.files.video[0].path : null;
-  
-    try {
- 
-      const item_photo_query = `UPDATE products 
-      SET main_video= ?
-      WHERE product_id= ?`
-
-      await new Promise( (resolve, reject) => { //update user password token
-
-        db.query(item_photo_query, [main_video, item_id], (err, result) => {
-
-          if (err) {
-
-            reject(err)
-          
-          } else {
-
-            resolve(result)
-
-          }
-
-        })
-
-      })
-
-   // Delete the old image from Cloudinary if public_id exists
-    if (current_public_id) {
-      
-      await cloudinary.uploader.destroy(current_public_id, { resource_type: "video" });
-    
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "success",
-      main_video: main_video
-    });
-     
-   } catch (error) {
-     
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update product video",
-    }); 
- 
-   }
- 
- }
-
-
-
-
 //GET REQUESTS
 
 //fetch admin
@@ -2142,6 +819,47 @@ static async fetch_users (req, res) {
 
 }
 
+
+
+//Fetch all transactions
+static async fetch_transactions(req, res) {
+
+  try {
+
+    const transactions_query = `
+      SELECT 
+        t.*,
+        u.fullname AS fullname
+      FROM transactions t
+      JOIN users u ON t.user_id = u.id
+    `
+
+    let all_transactions = await new Promise((resolve, reject) => {
+
+      db.query(transactions_query, (err, result) => {
+
+        if (err) reject(err)
+        else resolve(result)
+
+      })
+
+    })
+    
+    return res.status(200).json({
+      success: true,
+      message: "success",
+      all_transactions
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error loading data. please try again.",
+    });
+
+  }
+
+}
 
 
 //fetch sports
@@ -2272,207 +990,228 @@ static async fetch_leagues(req, res) {
 
 }
 
-
-
-//fetch staffs
-static async fetch_staffs (req, res) {
-
+// get manual events
+static async get_manual_events(req, res) {
   try {
-
-    const staffs_query = `
-    SELECT * 
-    FROM admin 
-    WHERE role != 'super_admin'
-    ORDER BY created_at DESC;
-  `;
-
-    let all_staffs = await new Promise( (resolve, reject) => {
-
-      db.query(staffs_query, (err, result) => {
-
-        if (err) {
-
-          reject(err)
-        
-        } else {
-
-          resolve(result)
-
-        }
-
-      })
-
-    })
-
-    return res.status(200).json({ // Success
-      success: true,
-      message: "success",
-      all_staffs
-    });
-    
-  } catch (error) {
-    
-    return res.status(500).json({
-      success: false,
-      message: "Error loading data. please try again.",
-    });
-
-  }
-
-}
-
-
-
-//fetch products
-static async fetch_products (req, res) {
-
-  try {
-
-    const products_query = `SELECT 
-      product.product_id,
-      product.name,
-      product.description,
-      product.product_condition,
-      product.stock_quantity,
-      product.price,
-      product.main_image,
-      product.main_video,
-      product.status,
-      product.category_id,
-      category.name AS category_name
-    FROM products AS product
-    JOIN categories AS category
-      ON product.category_id = category.category_id
-    ORDER BY product.created_at DESC;
-  `;
-  
-    let all_products = await new Promise( (resolve, reject) => {
-
-      db.query(products_query, (err, result) => {
-
-        if (err) {
-
-          reject(err)
-        
-        } else {
-
-          resolve(result)
-
-        }
-
-      })
-
-    })
-
-    return res.status(200).json({ // Success
-      success: true,
-      message: "success",
-      all_products
-    });
-    
-  } catch (error) {
-    
-    return res.status(500).json({
-      success: false,
-      message: "Error loading data. please try again.",
-    });
-
-  }
-
-}
-
-
-//fetch categories
-static async fetch_categories (req, res) {
  
-  try {
-
-    const categories_query = `SELECT * FROM categories`;
-  
-    let all_categories = await new Promise( (resolve, reject) => {
-
-      db.query(categories_query, (err, result) => {
-
-        if (err) {
-
-          reject(err)
-        
-        } else {
-
-          resolve(result)
-
-        }
-
-      })
-
-    })
-
-    return res.status(200).json({ // Success
-      success: true,
-      message: "success",
-      all_categories
-    });
-    
+    const rows = await HELPERS.query(db,
+      `SELECT
+        e.id, e.status, e.start_time, e.home_score, e.away_score,
+        s.name  AS sport_name,
+        l.name  AS league_name,
+        ht.name AS home_team,
+        at.name AS away_team
+       FROM events e
+       JOIN sports  s  ON s.id  = e.sport_id
+       JOIN leagues l  ON l.id  = e.league_id
+       JOIN teams   ht ON ht.id = e.home_team_id
+       JOIN teams   at ON at.id = e.away_team_id
+       WHERE e.external_id IS NULL
+       ORDER BY e.created_at DESC`,
+    )
+ 
+    return res.status(200).json({ success: true, events: rows })
+ 
   } catch (error) {
-    
-    return res.status(500).json({
-      success: false,
-      message: "Error loading data. please try again.",
-    });
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
 
+
+// Get event
+static async get_event(req, res) {
+  
+  try {
+  
+    const { id } = req.params
+
+    const rows = await HELPERS.query(db,
+      `SELECT 
+        e.id, e.sport_id, e.start_time, e.status, e.home_score, e.away_score, e.external_id,
+        e.created_at,
+        s.name  AS sport_name,
+        l.name  AS league_name,  l.logo AS league_logo,
+        ht.name AS home_team,    ht.logo AS home_team_logo,
+        at.name AS away_team,    at.logo AS away_team_logo
+       FROM events e
+       JOIN sports  s  ON s.id  = e.sport_id
+       JOIN leagues l  ON l.id  = e.league_id
+       JOIN teams   ht ON ht.id = e.home_team_id
+       JOIN teams   at ON at.id = e.away_team_id
+       WHERE e.id = ?`,
+      [id]
+    )
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Event not found' })
+    }
+
+    // ── Fetch markets + selections ───────────────────────
+    const markets = await HELPERS.query(db,
+      `SELECT 
+        em.id AS event_market_id, em.status AS market_status,
+        m.id  AS market_id,       m.name    AS market_name, m.slug AS market_slug
+       FROM event_markets em
+       JOIN markets m ON m.id = em.market_id
+       WHERE em.event_id = ?`,
+      [id]
+    )
+
+    for (const market of markets) {
+      market.selections = await HELPERS.query(db,
+        `SELECT id, name, odd, line_value, status
+         FROM selections
+         WHERE event_market_id = ?`,
+        [market.event_market_id]
+      )
+    }
+
+    // ── Fetch periods ────────────────────────────────────
+  const periods = await HELPERS.query(db,
+    `SELECT id, period, home_score, away_score 
+    FROM event_score_periods 
+    WHERE event_id = ? 
+    ORDER BY id ASC`,
+    [id]
+  )
+
+return res.status(200).json({
+  success: true,
+  event: { ...rows[0], markets, periods }
+})
+
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
+
+
+ // get markets
+static async get_markets(req, res) {
+    
+  try {
+      
+      const { sport_id } = req.query
+
+      const rows = sport_id
+        ? await HELPERS.query(db, 'SELECT id, name, slug FROM markets WHERE sport_id = ?', [sport_id])
+        : await HELPERS.query(db, 'SELECT id, name, slug FROM markets')
+ 
+      return res.status(200).json({ success: true, markets: rows })
+ 
+    } catch (error) {
+      console.log(error.message)
+      return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+    }
   }
 
+
+// get all bet slips
+static async get_bet_slips(req, res) {
+  
+  try {
+  
+    const rows = await HELPERS.query(db,
+      `SELECT
+        bs.id, bs.user_id, bs.total_odd, bs.stake, bs.possible_win,
+        bs.status, bs.bet_type, bs.created_at,
+        u.fullname
+      FROM bet_slips bs
+      JOIN users u ON u.id = bs.user_id
+      ORDER BY bs.created_at DESC`
+    )
+  
+    return res.status(200).json({ success: true, bet_slips: rows })
+  
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
 }
+
+
+static async get_bet_slip(req, res) {
+  
+  try {
+ 
+    const { id } = req.params
+ 
+    // ── Fetch bet slip ───────────────────────────────────
+    const rows = await HELPERS.query(db,
+      `SELECT
+        bs.id, bs.total_odd, bs.stake, bs.possible_win,
+        bs.status, bs.bet_type, bs.created_at, bs.settled_at,
+        u.fullname, u.email, u.balance
+       FROM bet_slips bs
+       JOIN users u ON u.id = bs.user_id
+       WHERE bs.id = ?`,
+      [id]
+    )
+ 
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Bet slip not found' })
+    }
+ 
+    // ── Fetch selections ─────────────────────────────────
+    const selections = await HELPERS.query(db,
+      `SELECT
+        bsel.id, bsel.selection_name, bsel.market_name,
+        bsel.odd_at_bet_time, bsel.line_value,
+        bsel.home_team, bsel.away_team,
+        bsel.status,
+        e.start_time, e.status AS event_status,
+        e.home_score, e.away_score
+       FROM bet_selections bsel
+       JOIN events e ON e.id = bsel.event_id
+       WHERE bsel.bet_slip_id = ?`,
+      [id]
+    )
+ 
+    return res.status(200).json({
+      success: true,
+      bet_slip: { ...rows[0], selections }
+    })
+ 
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
+
+
 
 
 //fetch settings
 static async fetch_settings (req, res) {
- 
+
   try {
 
-    const settings_query = `SELECT * FROM settings`;
-  
-    let all_settings = await new Promise( (resolve, reject) => {
-
-      db.query(settings_query, (err, result) => {
-
-        if (err) {
-
-          reject(err)
-        
-        } else {
-
-          resolve(result)
-
-        }
-
+    const settings = await new Promise((resolve, reject) => {
+      db.query('SELECT * FROM settings LIMIT 1', (err, result) => {
+        if (err) reject(err)
+        else resolve(result[0])
       })
-
     })
 
-    return res.status(200).json({ // Success
+
+    // Success
+    return res.status(200).json({
       success: true,
       message: "success",
-      all_settings: {
-        store_state: all_settings[0].store_state,
-        store_city: all_settings[0].store_city,
-        fee_same_state: all_settings[0].fee_same_state,
-        fee_same_city: all_settings[0].fee_same_city,
-        fee_other_state: all_settings[0].fee_other_state,
-        whatsapp: all_settings[0].whatsapp
-      }
+      all_settings: settings
     });
-    
+
   } catch (error) {
-    
+
     return res.status(500).json({
       success: false,
-      message: "Error loading data. please try again.",
+      message: "An error occurred while fetching user.",
     });
-
   }
-
 }
+
 
 
 // Verify admin Email
@@ -2668,9 +1407,9 @@ static async update_country(req, res) {
 
   try {
 
-    const { id, name, code, slug, current_flag } = req.body
+    console.log(req.file)
 
-    console.log(current_flag)
+    const { id, name, code, slug, current_flag } = req.body
 
     if (!id || !name || !code || !slug) {
       return res.status(400).json({
@@ -2702,6 +1441,7 @@ static async update_country(req, res) {
     let flagParams = []
 
     if (req.file) {
+      console.log(req.file)
       const flag = `/resources/countries/${req.file.filename}`
       flagQuery = ', flag = ?'
       flagParams = [flag]
@@ -2733,7 +1473,6 @@ static async update_country(req, res) {
     })
 
   } catch (error) {
-    console.log(error.message)
     return res.status(500).json({
       success: false,
       message: 'An error occurred. Please try again.'
@@ -2741,57 +1480,292 @@ static async update_country(req, res) {
   }
 }
 
-//update update item
-static async update_item (req, res) {
 
-  let item = req.body
+// update league info
+static async update_league(req, res) {
 
   try {
 
-  const items_query = `UPDATE products 
-  SET name= ?,
-  description= ?,
-  category_id= ?,
-  product_condition= ?,
-  status= ?,
-  stock_quantity= ?,
-  price= ?
-  WHERE product_id= ?`
+    const { id, name, slug, sport_id, country_id, current_logo } = req.body
 
-  await new Promise( (resolve, reject) => {
+    if (!id || !name || !slug || !sport_id || !country_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Id, name, slug, sport and country are required.'
+      })
+    }
 
-    db.query(items_query, [item.name, item.description, item.category_id, item.product_condition, item.status, item.stock_quantity, item.price, item.product_id], (err, result) => {
-
-      if (err) {
-
-        reject(err)
-      
-      } else {
-
-        resolve(result)
-
-      }
-
+    const existing = await new Promise((resolve, reject) => {
+      db.query(
+        'SELECT id FROM leagues WHERE (name = ? OR slug = ?) AND id != ? LIMIT 1',
+        [name, slug, id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
     })
 
-  })
+    if (existing.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Another league with that name or slug already exists.'
+      })
+    }
 
-  return res.status(200).json({ // Success
-    success: true,
-    message: "success",
-  });
-    
-} catch (error) {
+    // ── Handle logo upload ───────────────────────────
+    let logoQuery = ''
+    let logoParams = []
 
-  return res.status(500).json({
-    success: false,
-    message: "Error updating item info. try again",
-  });
-    
+    if (req.file) {
+      const logo = `/resources/leagues/${req.file.filename}`
+      logoQuery = ', logo = ?'
+      logoParams = [logo]
+
+      // ── Delete old logo if it exists ─────────────
+      if (current_logo) {
+        const oldPath = path.join(RESOURCES_ROOT, current_logo.replace('/resources', ''))
+        fs.unlink(oldPath, (err) => {
+          if (err) console.log('Could not delete old logo:', err.message)
+        })
+      }
+    }
+
+    // ── Update ───────────────────────────────────────
+    await new Promise((resolve, reject) => {
+      db.query(
+        `UPDATE leagues SET name = ?, slug = ?, sport_id = ?, country_id = ?${logoQuery} WHERE id = ?`,
+        [name, slug, sport_id, country_id, ...logoParams, id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'League updated successfully.'
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred. Please try again.'
+    })
+  }
 }
 
+
+//approve/reject transactions
+static async approve_reject_transaction(req, res) {
+
+  const { id, action } = req.body
+
+  try {
+
+    if (!id || !['completed', 'rejected'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request'
+      })
+    }
+
+    // Get transaction
+    const transactions_query =  `SELECT *
+      FROM transactions
+      WHERE id = ?`;
+
+    const transactions = await new Promise((resolve, reject) => {
+      db.query(transactions_query, [id], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    if (transactions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found'
+      })
+    }
+
+    const transaction = transactions[0]
+
+    // Prevent double processing
+    if (transaction.status !== 'processing') {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction already processed'
+      })
+    }
+
+    // Deposit approved
+    if (transaction.type === 'deposit' && action === 'completed') {
+
+      const update_user_balance_query = `UPDATE users
+        SET balance = balance + ?
+        WHERE id = ?`;
+
+      await new Promise((resolve, reject) => {
+        db.query(update_user_balance_query, [transaction.amount, transaction.user_id], (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        });
+      });
+
+    }
+
+    // Update transaction status
+    const transaction_status_query = `UPDATE transactions
+      SET status = ?
+      WHERE id = ?`;
+
+    await new Promise((resolve, reject) => {
+      db.query(transaction_status_query, [action, id], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Transaction ${action} successfully`
+    })
+
+  } catch (error) {
+
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    })
+
+  }
+
 }
 
+
+static async update_event_scores(req, res) {
+
+  try {
+
+    const { event_id, status, home_score, away_score, start_time } = req.body
+
+    if (!event_id) return res.status(400).json({ success: false, message: 'Event id is required' })
+    if (!status)   return res.status(400).json({ success: false, message: 'Status is required' })
+ 
+    await HELPERS.query(db,
+      `UPDATE events SET status = ?, home_score = ?, away_score = ?, start_time = ? WHERE id = ?`,
+      [status, home_score ?? 0, away_score ?? 0, start_time, event_id]
+    )
+ 
+    return res.status(200).json({ success: true, message: 'Event scores updated successfully' })
+ 
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+
+}
+
+
+static async update_bet_slip_status(req, res) {
+  try {
+ 
+    const { id, status } = req.body
+ 
+    if (!id)     return res.status(400).json({ success: false, message: 'Bet slip id is required' })
+    if (!status) return res.status(400).json({ success: false, message: 'Status is required' })
+ 
+    // ── Fetch current slip ───────────────────────────────
+    const rows = await HELPERS.query(db,
+      `SELECT bs.id, bs.status, bs.possible_win, bs.user_id
+       FROM bet_slips bs
+       WHERE bs.id = ?`,
+      [id]
+    )
+ 
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Bet slip not found' })
+    }
+ 
+    const slip = rows[0]
+ 
+    // ── Safeguard: already won, do not credit again ──────
+    if (slip.status === 'won' && status === 'won') {
+      return res.status(400).json({
+        success: false,
+        message: 'Bet slip is already marked as won. Balance was previously credited.'
+      })
+    }
+ 
+    // ── If won, credit possible_win to user balance ──────
+    let new_balance = null
+    let settled_at  = null
+ 
+    if (status === 'won') {
+ 
+      const updated = await HELPERS.query(db,
+        `UPDATE users SET balance = balance + ? WHERE id = ?`,
+        [slip.possible_win, slip.user_id]
+      )
+ 
+      // fetch updated balance to return to frontend
+      const user = await HELPERS.query(db,
+        `SELECT balance FROM users WHERE id = ?`,
+        [slip.user_id]
+      )
+ 
+      new_balance = user[0].balance
+      settled_at  = new Date().toISOString()
+    }
+ 
+    // ── Update bet slip status ───────────────────────────
+    await HELPERS.query(db,
+      `UPDATE bet_slips 
+       SET status = ?, settled_at = ?
+       WHERE id = ?`,
+      [status, status === 'won' ? settled_at : null, id]
+    )
+ 
+    return res.status(200).json({
+      success:     true,
+      message:     `Bet slip updated to "${status}" successfully.`,
+      new_balance: new_balance,
+      settled_at:  settled_at
+    })
+ 
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
+ 
+
+static async update_selection_status(req, res) {
+  
+  try {
+ 
+    const { id, status } = req.body
+ 
+    if (!id)     return res.status(400).json({ success: false, message: 'Selection id is required' })
+    if (!status) return res.status(400).json({ success: false, message: 'Status is required' })
+ 
+    await HELPERS.query(db,
+      `UPDATE bet_selections SET status = ? WHERE id = ?`,
+      [status, id]
+    )
+ 
+    return res.status(200).json({
+      success: true,
+      message: `Selection updated to "${status}" successfully.`
+    })
+ 
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
 
 
 //update admin info
@@ -2839,52 +1813,52 @@ static async update_admin_info (req, res) {
 
 
 
+
 //update system info
-static async update_system_info (req, res) {
+// update system info (crypto addresses)
+static async update_system_info(req, res) {
+
+  const { eth, btc, usdt } = req.body
 
   try {
 
-  //account setting update
-  const settings_query = `UPDATE settings 
-  SET fee_same_city = ?,
-  fee_same_state = ?,
-  fee_other_state = ?,
-  whatsapp = ?
-  `
+    const system_query = `UPDATE settings 
+    SET eth = ?, btc = ?, usdt = ?`
 
-  await new Promise( (resolve, reject) => {
+    await new Promise((resolve, reject) => {
 
-    db.query(settings_query, [req.body.fee_same_city, req.body.fee_same_state, req.body.fee_other_state, req.body.whatsapp], (err, result) => {
+      db.query(system_query, [eth, btc, usdt], (err, result) => {
 
-      if (err) {
+        if (err) {
 
-        reject(err)
-      
-      } else {
+          reject(err)
 
-        resolve(result)
+        } else {
 
-      }
+          resolve(result)
+
+        }
+
+      })
 
     })
 
-  })
+    return res.status(200).json({
+      success: true,
+      message: "success",
+    });
 
-  return res.status(200).json({
-    success: true,
-    message: "success",
-  });
-    
-} catch (error) {
+  } catch (error) {
 
-  return res.status(500).json({
-    success: false,
-    message: "An error occurred. Please try again.",
-  });  
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred. Please try again.",
+    });
 
-}
+  }
 
 }
+
 
 
 //update admin passwowrd
@@ -2977,192 +1951,251 @@ static async update_admin_pass (req, res) {
 }
 
 
-
-// Approve Staff
-static async approve_staff(req, res) {
-
-  const { admin_id, status } = req.body;
-
-  try {
-
-    // 1️⃣ Approve staff
-    const update_query = `
-      UPDATE admin
-      SET admin_status = ?
-      WHERE admin_id = ?
-    `;
-
-    await new Promise((resolve, reject) => {
-      db.query(update_query, [status, admin_id], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Staff Approved",
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred. Please try again.",
-    });
-
-  }
-}
-
-
-
-
-// update order status
-static async update_order_status(req, res) {
-
-  const { order_status, order_id } = req.body;
-
-  try {
-
-    // 1️⃣ Update order status
-    const update_query = `
-      UPDATE orders
-      SET order_status = ?
-      WHERE order_id = ?
-    `;
-
-    await new Promise((resolve, reject) => {
-      db.query(update_query, [order_status, order_id], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Order Status Updated",
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred. Please try again.",
-    });
-
-  }
-}
-
-
-//update payment status
-static async update_payment_status (req, res) {
-
-  let payment_status = req.body.payment_status
-
-  let order_id = req.body.order_id
-
-  try {
-
-  const order_query = `UPDATE orders 
-  SET payment_status= ?
-  WHERE order_id= ?`
-
-  await new Promise( (resolve, reject) => {
-
-    db.query(order_query, [payment_status, order_id], (err, result) => {
-
-      if (err) {
-
-        reject(err)
-      
-      } else {
-
-        resolve(result)
-
-      }
-
-    })
-
-  })
-
-  return res.status(200).json({
-    success: true,
-    message: "Payment Status Updated",
-  });
-  
-} catch (error) {
-
-  return res.status(500).json({
-    success: false,
-    message: "An error occurred. Please try again.",
-  });   
-
-  }
-
- }
-
  //DELETE REQUESTS
 
- //Delete Item Video
- static async delete_video (req, res) {
+
+// Delete user
+static async delete_user(req, res) {
 
   try {
 
-    let item_id = req.body.item_id
+    const { id } = req.body
 
-    let current_media_url = req.body.current_media_url
-
-    if (!current_media_url) {
-      
-      return res.status(400).json({ success: false, message: "No video URL provided" })
-    
+    if (!id) {
+      return res.status(400).json({ success: false, message: "User id is required" })
     }
 
-    let current_public_id = HELPERS.getPublicIdFromUrl(current_media_url)
+    // ── 1. Delete bet selections ─────────────────────
+    await new Promise((resolve, reject) => {
+      db.query(
+        `DELETE FROM bet_selections WHERE bet_slip_id IN (
+          SELECT id FROM bet_slips WHERE user_id = ?
+        )`,
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
 
-    // Delete the video from Cloudinary if public_id exists
-    if (current_public_id) {
-      
-      await cloudinary.uploader.destroy(current_public_id, { resource_type: "video" });
-    
-      const item_photo_query = `UPDATE products 
-      SET main_video= ?
-      WHERE product_id= ?`
-  
-      await new Promise( (resolve, reject) => { //update user password token
-  
-        db.query(item_photo_query, [null, item_id], (err, result) => {
-  
-          if (err) {
-  
-            reject(err)
-          
-          } else {
-  
-            resolve(result)
-  
-          }
-  
+    // ── 2. Delete bet slips ──────────────────────────
+    await new Promise((resolve, reject) => {
+      db.query(
+        'DELETE FROM bet_slips WHERE user_id = ?',
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    // ── 3. Fetch proof files before deleting transactions ──
+    const proofRows = await new Promise((resolve, reject) => {
+      db.query(
+        'SELECT proof_url FROM transactions WHERE user_id = ? AND proof_url IS NOT NULL',
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    // ── 4. Delete proof files from disk ──────────────
+    for (const row of proofRows) {
+      if (row.proof_url) {
+        const filePath = path.join(RESOURCES_ROOT, row.proof_url.replace('/resources', ''))
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Could not delete proof file:', err.message)
         })
-  
-      })
-
+      }
     }
 
-  return res.status(200).json({
-    success: true,
-    message: "success",
-  });
+    // ── 5. Delete transactions ───────────────────────
+    await new Promise((resolve, reject) => {
+      db.query(
+        'DELETE FROM transactions WHERE user_id = ?',
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    // ── 6. Delete user ───────────────────────────────
+    await new Promise((resolve, reject) => {
+      db.query(
+        'DELETE FROM users WHERE id = ?',
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'User deleted successfully.'
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred. Please try again.'
+    })
+  }
+
+}
+
+
+
+static async delete_event_market(req, res) {
+  
+  try {
+
+    const { id } = req.body
+
+    // ── Delete selections first ──────────────────────────
+    await HELPERS.query(db, 'DELETE FROM selections WHERE event_market_id = ?', [id])
+    await HELPERS.query(db, 'DELETE FROM event_markets WHERE id = ?', [id])
+
+    return res.status(200).json({ success: true, message: 'Market removed successfully' })
+
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
+}
+
+
+//delete selection
+ static async delete_selection(req, res) {
    
- } catch (error) {
+    try {
+      
+      const { id } = req.body
  
-  return res.status(500).json({
-    success: false,
-    message: "Failed to delete product video",
-  }); 
+      await HELPERS.query(db, 'DELETE FROM selections WHERE id = ?', [id])
+ 
+      return res.status(200).json({ success: true, message: 'Selection removed successfully' })
+ 
+    } catch (error) {
+      console.log(error.message)
+      return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+    }
+  }
 
- }
+ //Delete transaction
+static async delete_transaction(req, res) {
 
+  try {
+
+    const { id } = req.body
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Transaction id is required" })
+    }
+
+    // ── 1. Fetch proof file before deleting ──────────
+    const rows = await new Promise((resolve, reject) => {
+      db.query(
+        'SELECT proof_url FROM transactions WHERE id = ? AND proof_url IS NOT NULL',
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    // ── 2. Delete proof files from disk ─────────────
+    for (const row of rows) {
+      if (row.proof_url) {
+        const filePath = path.join(RESOURCES_ROOT, row.proof_url.replace('/resources', ''))
+        fs.unlink(filePath, (err) => {
+          if (err) console.log('Could not delete proof file:', err.message)
+        })
+      }
+    }
+
+    // ── 3. Delete transaction ────────────────────────
+    await new Promise((resolve, reject) => {
+      db.query(
+        'DELETE FROM transactions WHERE id = ?',
+        [id],
+        (err, result) => {
+          if (err) reject(err)
+          else resolve(result)
+        }
+      )
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Transaction deleted successfully.'
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred. Please try again.'
+    })
+  }
+
+}
+
+
+//delete event
+static async delete_event(req, res) {
+ 
+  try {
+ 
+    const { id } = req.body
+ 
+    if (!id) return res.status(400).json({ success: false, message: 'Event id is required' })
+ 
+    // ── 1. Delete bet_selections linked to this event ────
+    await HELPERS.query(db,
+      `DELETE FROM bet_selections WHERE event_id = ?`,
+      [id]
+    )
+ 
+    // ── 2. Delete selections via event_markets ───────────
+    await HELPERS.query(db,
+      `DELETE FROM selections WHERE event_market_id IN (
+        SELECT id FROM event_markets WHERE event_id = ?
+      )`,
+      [id]
+    )
+ 
+    // ── 3. Delete event_markets ──────────────────────────
+    await HELPERS.query(db,
+      `DELETE FROM event_markets WHERE event_id = ?`,
+      [id]
+    )
+ 
+    // ── 4. Delete event_score_periods ────────────────────
+    await HELPERS.query(db,
+      `DELETE FROM event_score_periods WHERE event_id = ?`,
+      [id]
+    )
+ 
+    // ── 5. Delete event ──────────────────────────────────
+    await HELPERS.query(db,
+      `DELETE FROM events WHERE id = ?`,
+      [id]
+    )
+ 
+    return res.status(200).json({ success: true, message: 'Event deleted successfully.' })
+ 
+  } catch (error) {
+    console.log(error.message)
+    return res.status(500).json({ success: false, message: 'An error occurred. Please try again.' })
+  }
 }
 
 

@@ -8,6 +8,7 @@ import { useCountriesStore } from './stores/countries';
 import { useUsersStore } from '@/stores/users';
 import { useLeaguesStore } from '@/stores/leagues';
 import { useEventsStore } from '@/stores/events';
+import { useTransactionsStore } from '@/stores/transactions';
 import { useSettingStore } from './stores/settings';
 
 import './assets/css/global.css'
@@ -21,10 +22,10 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 /* import specific icons */
-import { faNavicon, faSpinner, faHome, faCartShopping, faSearch, faUtensils, faHotel, faBurger, faPeopleRoof, faGraduationCap, faShop, faHouse, faUser, faTrash, faExclamation, faArrowRightLong, faXmark, faArrowLeftLong, faCircleCheck, faChevronLeft, faChevronRight, faBoxOpen, faUserTie, faEnvelope, faSignOut, faGauge, faUsers, faCalculator, faSort, faPhone, faLocation, faCamera, faMessage, faChartLine, faUserCog, faMobilePhone, faPlus, faMobileScreenButton} from '@fortawesome/free-solid-svg-icons'
+import { faNavicon, faSpinner, faHome, faCartShopping, faSearch, faUtensils, faHotel, faBurger, faPeopleRoof, faGraduationCap, faShop, faHouse, faUser, faTrash, faExclamation, faArrowRightLong, faXmark, faArrowLeftLong, faCircleCheck, faChevronLeft, faChevronRight, faBoxOpen, faUserTie, faEnvelope, faSignOut, faGauge, faUsers, faCalculator, faSort, faPhone, faLocation, faCamera, faMessage, faChartLine, faUserCog, faMobilePhone, faPlus, faMobileScreenButton, faGaugeHigh, faEarthAfrica, faTrophy, faCalendarDays, faTicket, faMoneyBillTransfer, faGear} from '@fortawesome/free-solid-svg-icons'
 
 /* add icons to the library */
-library.add( faNavicon, faSpinner, faHome, faCartShopping, faSearch, faUtensils, faHotel, faBurger, faPeopleRoof, faGraduationCap, faShop, faHouse, faUser, faTrash, faExclamation, faArrowRightLong, faXmark, faArrowLeftLong, faCircleCheck, faChevronLeft, faChevronRight, faBoxOpen, faUserTie, faEnvelope, faSignOut, faGauge, faUsers, faCalculator, faSort, faPhone, faLocation, faCamera, faMessage, faChartLine, faUserCog, faMobilePhone, faPlus, faMobileScreenButton)
+library.add( faNavicon, faSpinner, faHome, faCartShopping, faSearch, faUtensils, faHotel, faBurger, faPeopleRoof, faGraduationCap, faShop, faHouse, faUser, faTrash, faExclamation, faArrowRightLong, faXmark, faArrowLeftLong, faCircleCheck, faChevronLeft, faChevronRight, faBoxOpen, faUserTie, faEnvelope, faSignOut, faGauge, faUsers, faCalculator, faSort, faPhone, faLocation, faCamera, faMessage, faChartLine, faUserCog, faMobilePhone, faPlus, faMobileScreenButton, faGaugeHigh, faEarthAfrica, faTrophy, faCalendarDays, faTicket, faMoneyBillTransfer, faGear)
 
 
 // Import the component
@@ -60,6 +61,8 @@ const initializeApp = async () => {
 
     const events_store = useEventsStore()
 
+    const transactions_store = useTransactionsStore()
+
     const settings_store = useSettingStore();
     
     try {
@@ -80,9 +83,11 @@ const initializeApp = async () => {
 
             leagues_store.fetch_leagues(),
 
-            events_store.fetch_events(),
+            // events_store.fetch_events(),
 
             users_store.fetch_users(),
+
+            transactions_store.fetch_transactions(),
 
             settings_store.fetch_settings()
     

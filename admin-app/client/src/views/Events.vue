@@ -1,24 +1,18 @@
 <template>
-  
   <div class="container" :style="interactive_store.container_css">
 
     <OVERLAY/>
-
-    <SUCCESSALERTBOX>{{interactive_store.backend_message}}</SUCCESSALERTBOX>
-
-    <ERRORALERTBOX>{{interactive_store.backend_message}}</ERRORALERTBOX>
-    
+    <SUCCESSALERTBOX>{{ interactive_store.backend_message }}</SUCCESSALERTBOX>
+    <ERRORALERTBOX>{{ interactive_store.backend_message }}</ERRORALERTBOX>
     <SIDEBAR />
 
     <div class="sub_container" :style="interactive_store.sub_container_css">
 
-      <HEADER page_name="countries" searchbox_placeholder="Search by name or code" />
-      
+      <HEADER page_name="events" searchbox_placeholder="Search by team or league" />
+
       <div class="page-title-row">
-        <h1>Countries</h1>
-        <router-link class="add-btn" to ="/account/add-country">
-          + Add Country
-        </router-link>
+        <h1>Events</h1>
+        <router-link class="add-btn" to="/account/add-event">+ Create Event</router-link>
       </div>
 
       <div class="customer-table-container">
@@ -30,55 +24,36 @@
           <table class="customer-table" v-if="paginatedItems.length > 0">
             <thead>
               <tr>
-                <th>Flag</th>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>Code</th>
+                <th>Sport</th>
+                <th>League</th>
+                <th>Home Team</th>
+                <th>Away Team</th>
                 <th>Status</th>
+                <th>Start Time</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="country in paginatedItems" :key="country.id">
+              <tr v-for="event in paginatedItems" :key="event.id">
+                <td>{{ event.sport_name }}</td>
+                <td>{{ event.league_name }}</td>
+                <td>{{ event.home_team }}</td>
+                <td>{{ event.away_team }}</td>
                 <td>
-                  <img
-                    v-if="country.flag"
-                    :src="`http://localhost:7000${country.flag}`"
-                    :alt="country.name"
-                    class="flag-img"
-                  />
-                  <span v-else class="no-flag">—</span>
+                  <span :class="['status-badge', event.status]">{{ event.status }}</span>
                 </td>
-                <td>{{ country.name }}</td>
-                <td>{{ country.slug }}</td>
-                <td>{{ country.code }}</td>
+                <td>{{ formatDate(event.start_time) }}</td>
                 <td>
-                  <span :class="country.status == 'enabled' ? 'status-active' : 'status-inactive'">
-                    {{ country.status == 'enabled' ? 'Enabled' : 'Disabled' }}
-                  </span>
-                </td>
-                <td>
-                  <template v-if = "!country.is_seeded">
-                  <button
-                    class="action-btn enable"
-                    v-if="country.status != 'enabled'"
-                    @click="toggleStatus(country, 'enabled')"
-                    :disabled="loadingId === country.id"
-                  >
-                    {{ loadingId === country.id ? 'Updating...' : 'Enable' }}
-                  </button>
-                  <button
-                    class="action-btn disable"
-                    v-else
-                    @click="toggleStatus(country, 'disabled')"
-                    :disabled="loadingId === country.id"
-                  >
-                    {{ loadingId === country.id ? 'Updating...' : 'Disable' }}
-                  </button>
-                  <router-link :to ="`/account/edit-country/${country.id}`" class="action-btn edit" @click="router.push(`/account/edit-country/${country.id}`)">
-                    Edit
+                  <router-link :to="`/account/event-detail/${event.id}`" class="action-btn manage">
+                    Manage
                   </router-link>
-                  </template>
+                  <button
+                    class="action-btn delete"
+                    @click="deleteEvent(event)"
+                    :disabled="deletingId === event.id"
+                  >
+                    {{ deletingId === event.id ? 'Deleting...' : 'Delete' }}
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -109,51 +84,48 @@ import HEADER from '../components/Header.vue'
 import RECORDNOTFOUND from '../components/ItemsNotFound.vue'
 import SIDEBAR from '../components/SideBar.vue'
 import PAGINATION from '../components/Pagination.vue'
+import OVERLAY from '../components/modals/loading_overlay.vue'
 import { useInteractiveStore } from '@/stores/interactive'
 import { useAdminStore } from '@/stores/admin'
-import { useCountriesStore } from '@/stores/countries'
 import { useRouter } from 'vue-router'
 import API from '@/api/index'
 
 const interactive_store = useInteractiveStore()
 const admin_store       = useAdminStore()
-const countries_store   = useCountriesStore()
+const router            = useRouter()
 
-const router = useRouter()
-
-const currentPage  = ref(1)
+const events      = ref([])
+const currentPage = ref(1)
 const itemsPerPage = 20
-const loadingId    = ref(null)
+const deletingId  = ref(null)
 
-// ── Auth guard ──────────────────────────────────────
+// ── Auth Guard ───────────────────────────────
 watch(() => admin_store.isAuthenticated, (isAuthenticated) => {
   if (!isAuthenticated) {
     interactive_store.backend_message = 'Session expired'
-    interactive_store.display_success_alert_box(true)
+    interactive_store.display_error_alert_box(true)
     setTimeout(() => router.push({ path: '/login' }), 1000)
   }
 })
 
-// ── Data ────────────────────────────────────────────
-const countries = computed(() => countries_store.countries)
-
-// ── Reset pagination on search change ───────────────
+// ── Reset page on search ─────────────────────
 watch(() => interactive_store.query, () => {
   currentPage.value = 1
 })
 
-// ── Filtered ────────────────────────────────────────
+// ── Filter ───────────────────────────────────
 const filteredItems = computed(() => {
   const q = interactive_store.query?.toLowerCase().trim()
-  if (!q) return countries.value
-  return countries.value.filter(c =>
-    c.name?.toLowerCase().includes(q) ||
-    c.code?.toLowerCase().includes(q) ||
-    c.slug?.toLowerCase().includes(q)
+  if (!q) return events.value
+  return events.value.filter(e =>
+    e.home_team?.toLowerCase().includes(q)   ||
+    e.away_team?.toLowerCase().includes(q)   ||
+    e.league_name?.toLowerCase().includes(q) ||
+    e.sport_name?.toLowerCase().includes(q)
   )
 })
 
-// ── Paginated ───────────────────────────────────────
+// ── Paginate ─────────────────────────────────
 const paginatedItems = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filteredItems.value.slice(start, start + itemsPerPage)
@@ -163,31 +135,47 @@ const totalPages = computed(() =>
   Math.ceil(filteredItems.value.length / itemsPerPage)
 )
 
-// ── Toggle enable / disable ──────────────────────────
-async function toggleStatus(country, status) {
-  loadingId.value = country.id
+// ── Fetch Events ─────────────────────────────
+async function fetchEvents() {
   try {
-    const res = await API.toggle_country_status({ id: country.id, status })
-    if (res.success) {
-      // Update local store directly so UI reflects instantly
-      country.status = status
-      interactive_store.backend_message = res.message 
-      interactive_store.display_success_alert_box()
-    } else {
-      interactive_store.backend_message = res.message || 'Something went wrong'
-      interactive_store.display_error_alert_box()
-    }
+    const res = await API.get_manual_events()
+    events.value = res.events
   } catch (err) {
-    interactive_store.backend_message = 'Request failed. Try again.'
+    interactive_store.backend_message = err.message
     interactive_store.display_error_alert_box()
-  } finally {
-    loadingId.value = null
   }
 }
 
-// ── Mount ───────────────────────────────────────────
+// ── Delete Event ─────────────────────────────
+async function deleteEvent(event) {
+
+  if (!confirm(`Delete "${event.home_team} vs ${event.away_team}"? This will remove all markets, selections and period scores.`)) return
+
+  deletingId.value = event.id
+
+  try {
+
+    const res = await API.delete_event({ data: { id: event.id }})
+
+    events.value = events.value.filter(e => e.id !== event.id)
+
+    interactive_store.backend_message = res.message
+    interactive_store.display_success_alert_box()
+  } catch (err) {
+    console.log(err)
+  } finally {
+    deletingId.value = null
+  }
+}
+
+// ── Format date ──────────────────────────────
+function formatDate(dt) {
+  return new Date(dt).toLocaleString()
+}
+
 onMounted(() => {
   interactive_store.clearQuery()
+  fetchEvents()
 })
 </script>
 
@@ -201,7 +189,6 @@ onMounted(() => {
     margin: 0;
     padding: 0;
   }
-
   div.sub_container {
     display: block;
     margin: 0 0 0 250px;
@@ -210,7 +197,6 @@ onMounted(() => {
     width: calc(100% - 250px);
     overflow-y: auto;
   }
-
   div.sub_container h1 {
     margin: 0px auto 5px auto;
     color: #0E2E45;
@@ -228,14 +214,12 @@ onMounted(() => {
     margin: 0;
     padding: 0;
   }
-
   div.sub_container {
     display: block;
     margin: 0;
     padding: 0 15px 50px 15px;
     width: 100%;
   }
-
   div.sub_container h1 {
     margin: 0px auto 5px auto;
     color: #0E2E45;
@@ -265,7 +249,6 @@ onMounted(() => {
   transition: background 0.2s;
   white-space: nowrap;
 }
-
 .add-btn:hover { background-color: #1a4a6e; }
 
 /* ── Table ── */
@@ -279,7 +262,7 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 20px;
-  min-width: 600px;
+  min-width: 700px;
 }
 
 .customer-table th,
@@ -296,20 +279,19 @@ onMounted(() => {
 
 .customer-table tr:hover { background-color: #f9f9f9; }
 
-/* ── Flag ── */
-.flag-img {
-  width: 36px;
-  height: 24px;
-  object-fit: cover;
-  border-radius: 3px;
-  border: 1px solid #ddd;
+/* ── Status Badge ── */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
 }
-
-.no-flag { color: #aaa; font-size: 13px; }
-
-/* ── Status ── */
-.status-active  { color: green; font-weight: bold; }
-.status-inactive { color: red; font-weight: bold; }
+.status-badge.pending   { background: #fff3cd; color: #856404; }
+.status-badge.live      { background: #d4edda; color: #155724; }
+.status-badge.finished  { background: #d6d8d9; color: #383d41; }
+.status-badge.cancelled { background: #f8d7da; color: #721c24; }
+.status-badge.expired   { background: #e2e3e5; color: #6c757d; }
 
 /* ── Action buttons ── */
 .action-btn {
@@ -320,35 +302,26 @@ onMounted(() => {
   border-radius: 5px;
   cursor: pointer;
   transition: opacity 0.2s;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.action-btn.enable {
-  background-color: #e6f9ec;
-  color: #1a7a3c;
-  border: 1px solid #b2dfca;
+.action-btn.manage {
+  background-color: #fff8e1;
+  color: #b8860b;
+  border: 1px solid #f0d080;
+  margin-right: 6px;
 }
+.action-btn.manage:hover { background-color: #fdeea3; }
 
-.action-btn.enable:hover:not(:disabled) { background-color: #c8f0d8; }
-
-.action-btn.disable {
+.action-btn.delete {
   background-color: #fdecea;
   color: #c0392b;
   border: 1px solid #f5c6c2;
 }
-
-.action-btn.disable:hover:not(:disabled) { background-color: #fad4d0; }
-
-.action-btn.edit {
-  text-decoration: none;
-  background-color: #fff8e1;
-  color: #b8860b;
-  border: 1px solid #f0d080;
-  margin-left: 6px;
-}
-
-.action-btn.edit:hover { background-color: #fdeea3; }
+.action-btn.delete:hover:not(:disabled) { background-color: #fad4d0; }
 
 /* ── Table wrapper ── */
 .table-wrapper {

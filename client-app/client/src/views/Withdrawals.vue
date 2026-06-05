@@ -165,7 +165,7 @@ async function submitWithdrawal() {
 
     interactive_store.display_success_alert_box()
 
-    window.location.replace('/') // to transaction history page
+    window.location.replace('/account/transactions') // to transaction history page
   
   } catch (err) {
     

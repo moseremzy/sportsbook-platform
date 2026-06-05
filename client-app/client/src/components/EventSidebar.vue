@@ -22,7 +22,7 @@
             :class="{ active: activeSport === sport.slug }"
             @click="setQuery('sport', activeSport === sport.slug ? null : sport.slug)"
           >
-            <span class="sport-tree-icon" v-html="sport.icon"></span>
+            <img :src="`http://localhost:9000${sport.icon}`" class="sport-tree-icon"/>
             <span class="sport-tree-name">{{ sport.name }}</span>
             <svg class="chevron" :class="{ open: activeSport === sport.slug }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </div>
@@ -34,7 +34,7 @@
                 :class="{ open: openCountries.includes(country.slug) }"
                 @click="toggleCountry(country.slug)"
               >
-                <span class="country-flag">{{ country.flag }}</span>
+                <img :src="`http://localhost:9000${country.flag}`" class="country-flag"/>
                 <span class="country-name">{{ country.name }}</span>
                 <svg class="chevron" :class="{ open: openCountries.includes(country.slug) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
               </div>
@@ -47,6 +47,8 @@
                   :class="{ active: activeLeague === league.slug }"
                   @click="setQuery('league', activeLeague === league.slug ? null : league.slug)"
                 >
+                  <img v-if="league.logo" :src="`http://localhost:9000${league.logo}`" class="league-logo" />
+                  <span v-else class="league-logo-placeholder"></span>
                   {{ league.name }}
                 </div>
               </div>
@@ -261,7 +263,13 @@ function setQuery(key, value) {
 }
 .sport-tree-header:hover,
 .sport-tree-header.active { background: rgba(61,196,90,0.1); }
-.sport-tree-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.sport-tree-icon {
+  width: 20px;
+  height: 14px;
+  object-fit: contain;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 .sport-tree-icon svg { width: 100%; height: 100%; }
 .sport-tree-name { flex: 1; font-size: 13.5px; font-weight: 600; color: #fff; }
 
@@ -285,7 +293,13 @@ function setQuery(key, value) {
   border-bottom: 1px solid rgba(255,255,255,0.03);
 }
 .country-header:hover { background: rgba(255,255,255,0.05); }
-.country-flag { font-size: 16px; }
+.country-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 .country-name { flex: 1; font-size: 13px; color: rgba(255,255,255,0.8); }
 
 .league-list { background: rgba(0,0,0,0.1); }
@@ -296,6 +310,21 @@ function setQuery(key, value) {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   border-bottom: 1px solid rgba(255,255,255,0.03);
+  display: flex;        /* ← add this */
+  align-items: center;  /* ← add this */
+  gap: 8px;             /* ← add this */
+}
+.league-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.league-logo-placeholder {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 .league-item:hover  { background: rgba(255,255,255,0.05); color: #fff; }
 .league-item.active { color: #3dc45a; background: rgba(61,196,90,0.08); }

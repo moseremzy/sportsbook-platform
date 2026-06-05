@@ -16,7 +16,7 @@
           :class="{ active: activeSport === sport.slug }"
           @click="setQuery('sport', sport.slug)"
         >
-          <span class="sport-item-icon" v-html="sport.icon"></span>
+          <img :src="`http://localhost:9000${sport.icon}`" class="sport-item-icon"/>
           <span class="sport-item-name">{{ sport.name }}</span>
         </button>
       </div>
@@ -72,10 +72,10 @@
             <div v-for="group in filteredEvents" :key="group.leagueId" class="league-group">
               <div class="league-group-header" @click="toggleGroup(group.leagueId)">
                 <svg class="chevron-sm" :class="{ open: !collapsedGroups.includes(group.leagueId) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                <span class="league-group-flag">{{ group.flag }}</span>
+                <img :src="`http://localhost:9000${group.flag}`" class="league-group-flag"/> 
                 <span class="league-group-name">{{ group.leagueName }}</span>
               </div>
-
+           
               <div v-if="!collapsedGroups.includes(group.leagueId)">
                 <!-- <div class="odds-header desktop-only">
                   <span></span>
@@ -338,7 +338,7 @@ const groupedSports = computed(() =>
     id:   sport.id,
     slug: sport.slug,
     name: sport.name,
-    icon: sport.icon,
+    icon: sport.img,
     count: leagues_store.leagues.filter(l => l.sport_id === sport.id).length,
     countries: countries_store.countries
       .filter(c =>
@@ -348,9 +348,10 @@ const groupedSports = computed(() =>
         id:   c.id,
         slug: c.slug,
         name: c.name,
+        flag: c.flag,
         leagues: leagues_store.leagues
           .filter(l => l.sport_id === sport.id && l.country_id === c.id)
-          .map(l => ({ id: l.id, slug: l.slug, name: l.name })),
+          .map(l => ({ id: l.id, slug: l.slug, name: l.name, logo: l.logo })),
       })),
   }))
 )
@@ -519,7 +520,13 @@ onUnmounted(() => {
 }
 .sport-item:hover  { color: #fff; }
 .sport-item.active { color: #fff; border-bottom-color: #3dc45a; }
-.sport-item-icon   { width: 28px; height: 28px; }
+.sport-item-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 .sport-item-icon svg { width: 100%; height: 100%; }
 .sport-item-name   { font-size: 13px; font-weight: 600; }
 
@@ -626,7 +633,13 @@ onUnmounted(() => {
 .chevron-sm.open       { transform: rotate(0deg); }
 .chevron-sm:not(.open) { transform: rotate(-90deg); }
 
-.league-group-flag { font-size: 16px; }
+.league-group-flag {  
+  width: 25px;
+  height: 25px;
+  object-fit: cover;
+  border-radius: 100%;
+  flex-shrink: 0;
+}
 .league-group-name { flex: 1; font-size: 13.5px; font-weight: 700; }
 
 .odds-header {

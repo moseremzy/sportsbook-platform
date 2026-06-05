@@ -13,6 +13,7 @@ import { useUsersStore } from '@/stores/users';
 import { useLeaguesStore } from '@/stores/leagues';
 import { useEventsStore } from '@/stores/events';
 import { useSettingStore } from './stores/settings';
+import { useTransactionsStore } from './stores/transactions';
 import { useInteractiveStore } from './stores/interactive';
 
 import API from "./api/index";
@@ -30,6 +31,8 @@ const leagues_store = useLeaguesStore()
 const events_store = useEventsStore()
 
 const settings_store = useSettingStore();
+
+const transactions_store = useTransactionsStore();
 
 const interactive_store = useInteractiveStore();
 
@@ -95,6 +98,8 @@ setInterval(async () => {   // In App.vue (your polling function)
         events_store.fetch_events(),
 
         users_store.fetch_users(),
+
+        transactions_store.fetch_transactions(),
 
         settings_store.fetch_settings()
 

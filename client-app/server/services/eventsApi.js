@@ -19,8 +19,6 @@ async function fetchEvents(params) {
       response.headers["x-requests-remaining"]
     );
 
-   console.log(response.data)
-
     return response.data;
 
   } catch (error) {

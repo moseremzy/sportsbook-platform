@@ -24,61 +24,38 @@ export default class API {
     return api.post("/add_league", info).then(res => res.data);
   }
 
+   //create event
+   static async create_event(info) {
+    return api.post("/create_event", info).then(res => res.data);
+  }
+
+  //add event market
+  static async add_event_market(info) {
+    return api.post("/add_event_market", info).then(res => res.data);
+  }
+
+  //add selection
+  static async add_selection(info) {
+    return api.post("/add_selection", info).then(res => res.data);
+  }
+
+  //add/update event period
+  static async upsert_event_period(info) {
+    return api.post("/upsert_event_period", info).then(res => res.data);
+  }
+
   //contact us email
   static async contact_us(info) {
     return api.post("/contact_us", info).then(res => res.data);  
   }
    
-  //upload items
-  static async upload_items(info) {
-    return await api.post("/upload_items", info)
-  }
-
-  //update item photo
-  static async update_photo(info) {
-    return await api.post("/update_photo", info)
-  }
-  
-  //cancel order
-  static async cancel_order(info) {
-    return await api.post("/cancel_order", info)
-  }
-
-  //confirm order
-  static async confirm_order(info) {
-    return await api.post("/confirm_order", info)
-  }
-
-  //retry initiating refund for user order
-  static async retry_refund(info) {
-    return await api.post("/retry_refund", info)
-  }
-
-  //submits records before updating order status to delivered
-  static async submit_gadget_record(info) {
-    return await api.post("/submit_gadget_record", info)
-  }
-
-  //adjust prices
-  static async adjust_prices(info) {
-    return await api.post("/adjust_prices", info)
-  }
-
   //create manual order
   static async create_manual_order(info) {
     return await api.post("/create_manual_order", info)
   }
 
-  static async download_reciept(order_id) {
-    return api.post(`/download_reciept`, order_id, { responseType: 'blob' }).then(res => res.data);
-  }
 
   // GET
-
-  //Verify Email
-   static async emailVerification(id) {
-    return api.get(`/confirm-email/${id}`).then(res => res.data);
-  }
 
   static async fetch_admin() {
     return api.get("/fetch_admin").then(res => res.data);
@@ -100,24 +77,31 @@ export default class API {
     return api.get("/fetch_leagues").then(res => res.data);
   }
 
-  static async fetch_staffs() {
-    return api.get("/fetch_staffs").then(res => res.data);
+  static async fetch_transactions() {
+    return api.get("/fetch_transactions").then(res => res.data);
   }
 
-  static async fetch_products() {
-    return api.get("/fetch_products").then(res => res.data);
+  
+  static async get_manual_events() {
+    return api.get(`/get_manual_events`).then(res => res.data);
   }
 
-  static async fetch_categories() {
-    return api.get("/fetch_categories").then(res => res.data);
+  //get single event 
+  static async get_event(id) {
+    return api.get(`/get_event/${id}`).then(res => res.data);
   }
 
-  static async fetch_orders() {
-    return api.get("/fetch_orders").then(res => res.data);
+  static async get_markets(id) {
+    return api.get(`/get_markets?sport_id=${id}`).then(res => res.data);
   }
 
-  static async fetch_records() {
-    return api.get("/fetch_records").then(res => res.data);
+  static async get_bet_slips() {
+    return api.get(`/get_bet_slips`).then(res => res.data);
+  }
+
+  //get single Bet  
+  static async get_bet_slip(id) {
+    return api.get(`/get_bet_slip/${id}`).then(res => res.data);
   }
 
   static async fetch_settings() {
@@ -140,6 +124,28 @@ export default class API {
   static async update_country(info) {
     return api.patch("/update_country", info).then(res => res.data)
   }
+  
+  static async update_league(info) {
+    return api.patch("/update_league", info).then(res => res.data)
+  }
+
+  static async approve_reject_transaction(info) {
+    return api.patch("/approve_reject_transaction", info).then(res => res.data);
+  }
+
+  static async update_event_scores(info) {
+    return api.patch("/update_event_scores", info).then(res => res.data);
+  }
+
+   //update bet slip status
+  static async update_bet_slip_status(info) {
+    return await api.patch("/update_bet_slip_status", info)
+  }
+
+  //update selection status
+  static async update_selection_status(info) {
+    return await api.patch("/update_selection_status", info)
+  }
 
   static async update_admin_info(info) {
     return api.patch("/update_admin_info", info).then(res => res.data);
@@ -149,33 +155,30 @@ export default class API {
     return api.patch("/update_system_info", info).then(res => res.data);
   }
 
-  static async update_order_status(info) {
-    return api.patch("/update_order_status", info).then(res => res.data);
-  }
-
-  static async update_payment_status(info) {
-    return api.patch("/update_payment_status", info).then(res => res.data);
-  }
-
-  static async update_address(info) {
-    return api.patch("/update_address", info).then(res => res.data);
-  }
-
   static async update_admin_pass(info) {
     return api.patch("/update_admin_pass", info).then(res => res.data);
   }
 
-  static async approve_staff(info) {
-    return api.patch("/approve_staff", info).then(res => res.data);
-  }
 
   //DELETE
-  static async delete_video(info) {
-    return api.delete("/delete_video", info).then(res => res.data)
+  static async delete_user(info) {
+    return api.delete("/delete_user", info).then(res => res.data)
   }
 
-  static async delete_staff(info) {
-    return api.delete("/delete_staff", info).then(res => res.data)
+  static async delete_transaction(info) {
+    return api.delete("/delete_transaction", info).then(res => res.data)
+  }
+
+  static async delete_event_market(info) {
+    return api.delete("/delete_event_market", info).then(res => res.data)
+  }
+
+  static async delete_selection(info) {
+    return api.delete("/delete_selection", info).then(res => res.data)
+  }
+
+  static async delete_event(info) {
+    return api.delete("/delete_event", info).then(res => res.data)
   }
 
 }

@@ -6,6 +6,7 @@ const router = require("./routes/router.js")
 const cors = require("cors");
 const app = express();
 const path = require('path');
+const { getSettings } = require('./middlewares/settings')
 const RESOURCES_ROOT = path.resolve(__dirname, '../../resources');
 const base_url = process.env.BASE_URL
 
@@ -32,28 +33,37 @@ app.use(cors({
 }));
 
 
-console.log('Resources path:', RESOURCES_ROOT);
-console.log('File exists:', fs.existsSync(RESOURCES_ROOT + '/countries/country_image_1780324020622.png'));
-
-
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use('/api', router);
 app.use('/resources', express.static(RESOURCES_ROOT));
 
 
-
  
+
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(__dirname+"/dist/"))
-    app.get("*", (req, res) => {
-        res.sendFile(__dirname+"/dist/index.html")
-    })
+    
+  app.use(express.static(__dirname + "/dist/"));
+    
+    app.get("*", async (req, res) => {
+        
+      const settings = await getSettings() // already cached, no DB hit
+
+        let html = fs.readFileSync(path.join(__dirname, '/dist/index.html'), 'utf-8')
+
+        // Replace every hardcoded occurrence
+        html = html.replaceAll('techbycas.com', settings.website + '.win')
+
+        res.send(html)
+
+    });
 }
 
 
 
-app.listen(port, () => {
+app.listen(port, async () => {
+
+  await getSettings()
 
   console.log("server started...")
 

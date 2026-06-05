@@ -9,6 +9,7 @@ const session = require("express-session");
 const passport = require("passport");
 const sessionConfig = require("./middlewares/session");
 const { getSettings } = require('./middlewares/settings')
+const RESOURCES_ROOT = path.resolve(__dirname, '../../resources');
 const base_url = process.env.BASE_URL
 const app = express();
 
@@ -35,6 +36,8 @@ require("./middlewares/passport");
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/api', router);
+app.use('/resources', express.static(RESOURCES_ROOT));
+
 
 
 // Production static serving (if needed)
@@ -51,7 +54,7 @@ if (process.env.NODE_ENV === 'production') {
         let html = fs.readFileSync(path.join(__dirname, '/dist/index.html'), 'utf-8')
 
         // Replace every hardcoded occurrence
-        html = html.replaceAll('techbycas.com', settings.website + '.win')
+        html = html.replaceAll('admin.techbycas.com', 'admin.' + settings.website + '.win')
 
         res.send(html)
 
