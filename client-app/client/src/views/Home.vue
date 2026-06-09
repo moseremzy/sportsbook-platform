@@ -17,7 +17,7 @@
             class="league-card"
           >
             <div class="league-icon">
-              <img :src="`http://localhost:9000${league.img}`" :alt="league.name" />
+              <img :src="`https://${settings_store.settings.website}.win${league.img}`" :alt="league.name" />
             </div>
             <div class="league-label">
               <span class="league-sport">{{ league.sport }}</span>
@@ -43,7 +43,7 @@
         <div class="tab-scroll-wrap">
           <router-link to = "/events" class="tab-chips auto-scroll-inner" :style="scrollStyle('sports')">
               <div v-for="(s, i) in matchSportsLoop" :key="i" class="chip">
-                <img :src="`http://localhost:9000${s.img}`" class="chip-icon" :alt="s.name" />
+                <img :src="`https://${settings_store.settings.website}.win${s.img}`" class="chip-icon" :alt="s.name" />
                 {{ s.name }}
               </div>
           </router-link>
@@ -105,9 +105,11 @@ import footbCard from '../assets/static_images/SPORTS/football.jpg'
 
 import { useLeaguesStore } from "../stores/leagues"
 import { usesportsStore } from "../stores/sports"
+import { useSettingsStore } from '../stores/settings'
 
 const leagues_store = useLeaguesStore()
 const sports_store = usesportsStore()
+const settings_store = useSettingsStore()
 
 // ── Data ─────────────────────────────────────────────
 const leagues = computed(() => {

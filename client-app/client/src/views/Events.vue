@@ -16,7 +16,7 @@
           :class="{ active: activeSport === sport.slug }"
           @click="setQuery('sport', sport.slug)"
         >
-          <img :src="`http://localhost:9000${sport.icon}`" class="sport-item-icon"/>
+          <img :src="`https://${settings_store.website}.win${sport.icon}`" class="sport-item-icon"/>
           <span class="sport-item-name">{{ sport.name }}</span>
         </button>
       </div>
@@ -72,7 +72,7 @@
             <div v-for="group in filteredEvents" :key="group.leagueId" class="league-group">
               <div class="league-group-header" @click="toggleGroup(group.leagueId)">
                 <svg class="chevron-sm" :class="{ open: !collapsedGroups.includes(group.leagueId) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                <img :src="`http://localhost:9000${group.flag}`" class="league-group-flag"/> 
+                <img :src="`https://${settings_store.website}.win${group.flag}`" class="league-group-flag"/> 
                 <span class="league-group-name">{{ group.leagueName }}</span>
               </div>
            
@@ -179,6 +179,7 @@ import { useCountriesStore } from '../stores/countries'
 import { usesportsStore } from '../stores/sports'
 import { useLeaguesStore } from '../stores/leagues'
 import { useEventsStore } from '../stores/events'
+import { useSettingsStore } from '../stores/settings'
 import EventSidebar from '../components/EventSidebar.vue'
 import Betslip from '../components/Betslip.vue'
 
@@ -190,6 +191,7 @@ const countries_store   = useCountriesStore()
 const sports_store      = usesportsStore()
 const leagues_store     = useLeaguesStore()
 const events_store = useEventsStore()
+const settings_store = useSettingsStore()
 
 // ── State ─────────────────────────────────────────────
 const allEvents        = ref([])

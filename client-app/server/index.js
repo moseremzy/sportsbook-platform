@@ -5,6 +5,7 @@ const port = process.env.PORT || 9000;
 const router = require("./routes/router.js");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs")
 const session = require("express-session");
 const passport = require("passport");
 const sessionConfig = require("./middlewares/session");
@@ -41,7 +42,7 @@ app.use('/resources', express.static(RESOURCES_ROOT));
 
 
 // Production static serving (if needed)
-const fs = require("fs")
+
 
 if (process.env.NODE_ENV === 'production') {
     

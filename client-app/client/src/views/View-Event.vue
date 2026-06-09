@@ -49,7 +49,7 @@
             <!-- TOP BAR -->
             <div class="card-top">
               <div class="league">
-                <img v-if="event.league_logo" :src="`http://localhost:9000${event.league_logo}`" alt="" />
+                <img v-if="event.league_logo" :src="`https://${settings_store.settings.website}.win${event.league_logo}`" alt="" />
                 <span>{{ event.sport_name }}. {{ event.league_name }}</span>
               </div>
               <div class="top-actions">
@@ -210,6 +210,7 @@ import { useCountriesStore } from '../stores/countries'
 import { usesportsStore } from '../stores/sports'
 import { useLeaguesStore } from '../stores/leagues'
 import { useEventsStore } from '../stores/events'
+import { useSettingsStore } from '../stores/settings'
 import EventSidebar from '../components/EventSidebar.vue'
 import Betslip from '../components/Betslip.vue'
 
@@ -221,6 +222,7 @@ const countries_store   = useCountriesStore()
 const sports_store      = usesportsStore()
 const leagues_store     = useLeaguesStore()
 const events_store      = useEventsStore()
+const settings_store = useSettingsStore()
 
 // ── State ─────────────────────────────────────────────
 const event          = ref(null)
