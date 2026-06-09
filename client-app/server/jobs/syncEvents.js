@@ -162,6 +162,9 @@ async function upsertEventPeriods(eventId, periods) {
 
 async function syncEvents() {
 
+  console.log(`[syncEvents] Started at ${new Date().toISOString()}`);
+
+
   try {
 
     const leagues_query = `
