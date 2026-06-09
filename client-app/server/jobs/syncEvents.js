@@ -266,4 +266,4 @@ async function syncEvents() {
 }
 
 
-module.exports = syncEvents; 
+module.exports = syncEvents

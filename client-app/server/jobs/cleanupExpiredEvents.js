@@ -1,6 +1,24 @@
 const db = require("../middlewares/database");
 
 
+async function query(sql, values = []) {
+
+    return new Promise((resolve, reject) => {
+  
+      db.query(sql, values, (err, result) => {
+  
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+  
+      });
+  
+    });
+  
+  }
+  
 // Nightly cleanup job — hard-deletes expired events with no pending bets, older than 1 days. CHANGE AM TO 7 
 // Run on a separate cron, e.g. once per day at midnight.
 async function cleanupExpiredEvents() {
