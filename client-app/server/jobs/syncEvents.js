@@ -267,3 +267,8 @@ async function syncEvents() {
 
 
 module.exports = syncEvents
+
+// Run when executed directly (e.g. from cron)
+if (require.main === module) {
+  syncEvents();
+}

@@ -18,7 +18,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 
-//require("./cron/cron_job"); // THIS triggers the cron file
+require("./cron/cron_job"); // THIS triggers the cron file
 
 app.use(cors({
   origin: `${base_url}`,   // your Vue frontend
