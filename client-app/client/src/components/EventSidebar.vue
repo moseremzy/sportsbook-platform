@@ -22,7 +22,7 @@
             :class="{ active: activeSport === sport.slug }"
             @click="setQuery('sport', activeSport === sport.slug ? null : sport.slug)"
           >
-            <img :src="`http://localhost:9000${sport.icon}`" class="sport-tree-icon"/>
+            <img :src="`https://${settings_store.settings.website}.win${sport.icon}`" class="sport-tree-icon"/>
             <span class="sport-tree-name">{{ sport.name }}</span>
             <svg class="chevron" :class="{ open: activeSport === sport.slug }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </div>
@@ -34,7 +34,7 @@
                 :class="{ open: openCountries.includes(country.slug) }"
                 @click="toggleCountry(country.slug)"
               >
-                <img :src="`http://localhost:9000${country.flag}`" class="country-flag"/>
+                <img :src="`https://${settings_store.settings.website}.win${country.flag}`" class="country-flag"/>
                 <span class="country-name">{{ country.name }}</span>
                 <svg class="chevron" :class="{ open: openCountries.includes(country.slug) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
               </div>
@@ -47,7 +47,7 @@
                   :class="{ active: activeLeague === league.slug }"
                   @click="setQuery('league', activeLeague === league.slug ? null : league.slug)"
                 >
-                  <img v-if="league.logo" :src="`http://localhost:9000${league.logo}`" class="league-logo" />
+                  <img v-if="league.logo" :src="`https://${settings_store.settings.website}.win${league.logo}`" class="league-logo" />
                   <span v-else class="league-logo-placeholder"></span>
                   {{ league.name }}
                 </div>
@@ -65,11 +65,13 @@
 import { ref, computed }           from 'vue'
 import { useRoute, useRouter }     from 'vue-router'
 import { useInteractiveStore }     from '../stores/interactive'
+import { useSettingsStore }     from '../stores/settings'
 
 const route  = useRoute()
 const router = useRouter()
 
 const interactive_store = useInteractiveStore()
+const settings_store = useSettingsStore()
 
 const props = defineProps({
   sports:   { type: Array, required: true },

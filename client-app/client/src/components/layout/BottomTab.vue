@@ -10,14 +10,14 @@
       <span>Bets</span>
     </router-link>
 
-    <router-link to = "/coming-soon" exact-active-class = "tab-item--active" class="tab-item">
+    <!-- <router-link to = "/coming-soon" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="12" cy="12" r="9"/>
         <circle cx="12" cy="12" r="3"/>
         <path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
       </svg>
       <span>Casinos</span>
-    </router-link>
+    </router-link> -->
 
     <router-link to = "/account/deposits" exact-active-class = "tab-item--active" class="tab-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -106,10 +106,7 @@ import { ref } from 'vue'
 .tab-item--active {
   color: var(--color1);
 }
-
-.tab-item:hover {
-  color: rgba(255,255,255,0.75);
-}
+ 
 
 /* Live chat bubble — sits in the center area */
 .chat-bubble {

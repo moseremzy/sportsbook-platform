@@ -248,7 +248,7 @@ onMounted(fetchBetHistory)
   background: #0a1f10;
   min-height: 100vh;
   color: #fff;
-  width: 80%;
+  width: 90%;
   margin: 0 auto;
   padding-bottom: 32px;
 }

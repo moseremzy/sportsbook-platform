@@ -26,8 +26,8 @@
       </template>
 
       <template v-else>
-        <router-link to = "/sign-in" class="auth-btn signin-btn">Sign In</router-link>
         <router-link to = "/sign-in" class="auth-btn signup-btn">Sign Up</router-link>
+        <router-link to = "/sign-in" class="auth-btn signin-btn">Sign In</router-link>
       </template>
     </div>
   </header>
@@ -57,7 +57,7 @@ const interactive_store = useInteractiveStore()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 10px 0 8px;
   gap: 12px;
   overflow: hidden;              /* ✅ prevents logo from bleeding out */
 }
@@ -99,6 +99,7 @@ const interactive_store = useInteractiveStore()
 .deposit-btn {
   display: none;
 }
+
 
 @media (min-width: 1025px) {
   .hamburger.desktop-only {
@@ -215,25 +216,31 @@ const interactive_store = useInteractiveStore()
   letter-spacing: 0.02em;
 }
 
-.signin-btn {
+.signup-btn {
   background: none;
   border: 1px solid rgba(255,255,255,0.25);
   color: rgba(255,255,255,0.85);
 }
 
-.signin-btn:hover {
+.signup-btn:hover {
   border-color: rgba(255,255,255,0.5);
   color: var(--text);
 }
 
-.signup-btn {
+.signin-btn {
   background: linear-gradient(135deg, #3dc45a, #2aa646);
   border: none;
   color: var(--text);
 }
 
-.signup-btn:hover {
+.signin-btn:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+@media (max-width: 1025px) {
+  .signup-btn {
+    display: none;
+  }
 }
 </style>
