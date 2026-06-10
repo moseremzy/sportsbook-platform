@@ -84,10 +84,11 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
+app.get('/test-version', (req, res) => {
+  res.json({ version: 'v2-updated', time: new Date().toISOString() });
+});
+
 app.listen(port, async () => {
-
-  await getSettings()
-
+  await getSettings();
   console.log("server started on port", port);
-
 });
