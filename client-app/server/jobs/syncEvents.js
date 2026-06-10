@@ -275,15 +275,4 @@ async function syncEvents() {
 
 module.exports = syncEvents
 
-syncEvents().then(() => {
-  console.log('[syncEvents] Done, closing connection...');
-  db.end(() => {
-    console.log('[syncEvents] Connection closed. Exiting.');
-    process.exit(0);
-  });
-}).catch((err) => {
-  console.error('[syncEvents] Failed:', err.message);
-  db.end(() => {
-    process.exit(1);
-  });
-});
+syncEvents();
