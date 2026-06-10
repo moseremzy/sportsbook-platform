@@ -29,7 +29,7 @@ const base_url = process.env.BASE_URL
 const app = express();
 
 
-app.set("trust proxy", 1);
+// app.set("trust proxy", 1);
 
 
 require("./cron/cron_job"); // THIS triggers the cron file
