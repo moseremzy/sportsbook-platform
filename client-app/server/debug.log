@@ -1,0 +1,28 @@
+App started at 2026-06-10T16:42:40.848Z
+LOG:  [syncEvents] Started at 2026-06-10T16:42:41.827Z   
+LOG:  Running initial syncEvents   
+LOG:  [syncEvents] Started at 2026-06-10T16:42:41.836Z   
+LOG:  cron loaded   
+LOG:  connected successfully   
+LOG:  server started on port 9000  
+LOG:  Remaining Requests:   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 5, marked all as expired   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 1, marked all as expired   
+LOG:  Remaining Requests:   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 2, marked all as expired   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 3, marked all as expired   
+LOG:  Remaining Requests:   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 5, marked all as expired   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 1, marked all as expired   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 2, marked all as expired   
+LOG:  Initial syncEvents finished   
+LOG:  Remaining Requests:   
+LOG:  No fresh events for league 3, marked all as expired   
+LOG:  Remaining Requests:   
