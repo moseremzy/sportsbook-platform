@@ -33,7 +33,12 @@ const app = express();
 // app.set("trust proxy", 1);
 
 
-require("./cron/cron_job"); // THIS triggers the cron file
+try {
+  require("./cron/cron_job");
+  console.log("cron loaded");
+} catch (err) {
+  console.error("cron failed to load", err);
+}
 
 
 
