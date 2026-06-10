@@ -4,10 +4,10 @@
       <button class="hamburger desktop-only" @click.stop="interactive_store.toggleNav('left_side_bar')" aria-label="Menu">
         <span/><span/><span/>
       </button>
-      <a href="/" class="logo">
+      <!-- <a href="/" class="logo">
         <img src="../../assets/static_images/logo.png" alt="Viking Bet" class="logo-img" />
         <span class="logo-text">{{settings_store.settings.website.toUpperCase()}}</span>
-      </a>
+      </a> -->
     </div>
 
     <div class="header-right">
