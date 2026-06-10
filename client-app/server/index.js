@@ -62,6 +62,9 @@ app.use('/api', router);
 app.use('/resources', express.static(RESOURCES_ROOT));
 
 
+app.get('/test-version', (req, res) => {
+  res.json({ version: 'v2-updated', time: new Date().toISOString() });
+});
 
 // Production static serving (if needed)
 
@@ -84,9 +87,7 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
-app.get('/test-version', (req, res) => {
-  res.json({ version: 'v2-updated', time: new Date().toISOString() });
-});
+
 
 app.listen(port, async () => {
   await getSettings();
