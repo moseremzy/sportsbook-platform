@@ -2,6 +2,10 @@ const db = require("../middlewares/database");
 
 const { fetchEvents } = require("../services/eventsApi");
 
+function toMySQL(iso) {
+  return new Date(iso).toISOString().slice(0, 19).replace('T', ' ');
+}
+
 async function query(sql, values = []) {
 
   return new Promise((resolve, reject) => {
@@ -95,7 +99,7 @@ async function upsertEvent(event) {
         event.status,
         event.home_score,
         event.away_score,
-        event.start_time,
+        toMySQL(event.start_time),
         event.external_id
       ]
     );
@@ -248,7 +252,7 @@ async function syncEvents() {
           league_id:    league.id,
           home_team_id: homeTeamId,
           away_team_id: awayTeamId,
-          start_time:   event.date,
+          start_time: toMySQL(event.date),
           status:       event.status || "pending",
           home_score:   event.scores?.home || 0,
           away_score:   event.scores?.away || 0,
