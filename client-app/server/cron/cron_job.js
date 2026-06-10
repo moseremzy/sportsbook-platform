@@ -6,11 +6,7 @@ const syncOdds = require("../jobs/syncOdds");
 
 const cleanupExpiredEvents = require("../jobs/cleanupExpiredEvents");
 
-//  (async () => { 
-//    await syncEvents();
-//  })()
-
-
+console.log('[cron] Scheduler loaded at', new Date().toISOString());
 
 /* EVENTS SYNC - RUNS EVERY 5 MINS. FETCHES MAX OF 10 EVENTS PER LEAGUE. I HAVE 6 LEAGUES SO EVERY 5 MINS THE API IS CALLED ON 6 TIMES. LEADING TO 72 CALLs PER HOUR */
  cron.schedule("*/5 * * * *", async () => {
