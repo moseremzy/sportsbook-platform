@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs")
 const util = require('util');
 const log_file = fs.createWriteStream(__dirname + '/debug.log', {flags: 'w'});
+log_file.write('App started at ' + new Date().toISOString() + '\n');
 const log_stdout = process.stdout;
 
 console.log = (d, e, f, g) => {
