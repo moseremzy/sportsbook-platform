@@ -275,4 +275,11 @@ async function syncEvents() {
 
 module.exports = syncEvents
  
-syncEvents();
+syncEvents().then(() => {
+  db.end();       // close MySQL connection pool
+  process.exit(0);
+}).catch((err) => {
+  console.error(err);
+  db.end();
+  process.exit(1);
+});
