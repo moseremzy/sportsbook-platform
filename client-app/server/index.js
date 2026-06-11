@@ -2,9 +2,9 @@ require("dotenv").config();
 
 const path = require("path");
 const fs = require("fs")
+
 const util = require('util');
-const log_file = fs.createWriteStream('/home/primeodd/test_debug.log', {flags: 'w'});
-log_file.write('App started at ' + new Date().toISOString() + '\n');
+const log_file = fs.createWriteStream(__dirname + '/debug.log', {flags: 'w'});
 const log_stdout = process.stdout;
 
 console.log = (d, e, f, g) => {
@@ -16,6 +16,7 @@ console.error = (d, e, f, g) => {
   log_file.write(util.format('ERROR: ', d?d:'', e?e:'', f?f:'', g?g:'') + '\n');
   log_stdout.write(util.format('ERROR: ', d?d:'', e?e:'', f?f:'', g?g:'') + '\n');
 }
+
 
 const express = require("express");
 const port = process.env.PORT || 9000;
@@ -62,7 +63,7 @@ app.use('/api', router);
 app.use('/resources', express.static(RESOURCES_ROOT));
 
 
-app.get('/test-version', (req, res) => {
+app.get('/api/test-version', (req, res) => {
   res.json({ version: 'v2-updated', time: new Date().toISOString() });
 });
 
