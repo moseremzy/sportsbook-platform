@@ -169,6 +169,8 @@ static async register(req, res) {
    
   const data = req.body
 
+  console.log('he reacch here oo')
+
   let this_user = null
 
   let date = new Date()
